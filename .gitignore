@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.pnpm-store/
+.agents/
+
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
+Thumbs.db

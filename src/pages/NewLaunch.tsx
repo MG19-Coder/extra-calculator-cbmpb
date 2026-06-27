@@ -1,0 +1,119 @@
+import { CheckCircle2, Plus } from "lucide-react";
+import { useState } from "react";
+import type { AppState, CategoriaPagamento, Lancamento } from "../types";
+import { Field, inputClass, primaryButton, Section } from "../components/ui";
+import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
+
+export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: Lancamento[]) => void }) {
+  const [preset, setPreset] = useState("MG_ORDINARIO");
+  const [serviceDate, setServiceDate] = useState(`${state.selectedMonth}-10`);
+  const [aulaDate, setAulaDate] = useState(`${state.selectedMonth}-10`);
+  const [horaInicioAula, setHoraInicioAula] = useState("00:00");
+  const [horaFimAula, setHoraFimAula] = useState("15:00");
+  const [competenciaImplantacaoAula, setCompetenciaImplantacaoAula] = useState(state.selectedMonth);
+  const [curso, setCurso] = useState("Instrucao");
+  const [disciplina, setDisciplina] = useState("Instrucao");
+  const [horasNormais, setHorasNormais] = useState(12);
+  const [horasMajoradas, setHorasMajoradas] = useState(12);
+  const [horasPagaveis, setHorasPagaveis] = useState(24);
+  const [origemMes, setOrigemMes] = useState("05");
+  const [origemAno, setOrigemAno] = useState("2026");
+  const [notice, setNotice] = useState("");
+
+  function changePreset(value: string) {
+    setPreset(value);
+    if (value === "HORA_AULA_INSTRUCAO") setCurso("Instrucao");
+    if (value === "HORA_AULA_CFSD") setCurso("CFSD");
+    if (value === "HORA_AULA_CFS") setCurso("CFS");
+    if (value === "HORA_AULA_CFO") setCurso("CFO");
+    if (value === "HORA_AULA_OUTRA") setCurso("Outra");
+  }
+
+  function submit() {
+    let item: Lancamento;
+    if (preset === "MG_ORDINARIO") {
+      item = createMgOrdinario(serviceDate, state.valores, state.feriados);
+    } else if (preset === "MG_EXTRA") {
+      item = createMgExtra(serviceDate, state.valores, state.feriados);
+    } else if (preset === "EXTRA_B5") {
+      item = createExtraB5({ serviceDate, valores: state.valores, feriados: state.feriados, horasNormais, horasMajoradas, horasPagaveis });
+    } else if (preset === "PENDENCIA_ANTERIOR") {
+      item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores: state.valores });
+    } else {
+      const categoria = preset as Extract<CategoriaPagamento, "HORA_AULA_INSTRUCAO" | "HORA_AULA_CFSD" | "HORA_AULA_CFS" | "HORA_AULA_CFO" | "HORA_AULA_OUTRA">;
+      const inicio = `${aulaDate}T${horaInicioAula}`;
+      const fim = `${aulaDate}T${horaFimAula}`;
+      item = createHoraAula({ inicio, fim, categoria, curso, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores: state.valores });
+    }
+    onAdd([item]);
+    setNotice(`${item.titulo} lancado com sucesso. ${item.horasPagaveis}h registradas para ${item.competenciaImplantacao}.`);
+  }
+
+  const isAula = preset.startsWith("HORA_AULA");
+
+  return (
+    <Section title="Novo lancamento">
+      <div className="grid gap-4">
+        <Field label="Preset rapido">
+          <select className={inputClass} value={preset} onChange={(event) => changePreset(event.target.value)}>
+            <option value="MG_ORDINARIO">MG Ordinario</option>
+            <option value="MG_EXTRA">MG Extra</option>
+            <option value="EXTRA_B5">Extra B5</option>
+            <option value="HORA_AULA_INSTRUCAO">Hora-aula Instrucao</option>
+            <option value="HORA_AULA_CFSD">Hora-aula CFSD</option>
+            <option value="HORA_AULA_CFS">Hora-aula CFS</option>
+            <option value="HORA_AULA_CFO">Hora-aula CFO</option>
+            <option value="HORA_AULA_OUTRA">Hora-aula Outra</option>
+            <option value="PENDENCIA_ANTERIOR">Pendencia anterior</option>
+          </select>
+        </Field>
+
+        {!isAula && preset !== "PENDENCIA_ANTERIOR" && (
+          <Field label="Data da prontidao/servico">
+            <input className={inputClass} type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} />
+          </Field>
+        )}
+
+        {preset === "EXTRA_B5" && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field label="Horas normais"><input className={inputClass} type="number" value={horasNormais} onChange={(event) => setHorasNormais(Number(event.target.value))} /></Field>
+            <Field label="Horas majoradas"><input className={inputClass} type="number" value={horasMajoradas} onChange={(event) => setHorasMajoradas(Number(event.target.value))} /></Field>
+            <Field label="Horas pagaveis"><input className={inputClass} type="number" value={horasPagaveis} onChange={(event) => setHorasPagaveis(Number(event.target.value))} /></Field>
+          </div>
+        )}
+
+        {isAula && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Dia da aula"><input className={inputClass} type="date" value={aulaDate} onChange={(event) => setAulaDate(event.target.value)} /></Field>
+            <Field label="Competencia de implantacao"><input className={inputClass} type="month" value={competenciaImplantacaoAula} onChange={(event) => setCompetenciaImplantacaoAula(event.target.value)} /></Field>
+            <Field label="Inicio da aula"><input className={inputClass} type="time" value={horaInicioAula} onChange={(event) => setHoraInicioAula(event.target.value)} /></Field>
+            <Field label="Fim da aula"><input className={inputClass} type="time" value={horaFimAula} onChange={(event) => setHoraFimAula(event.target.value)} /></Field>
+            <Field label="Curso"><input className={inputClass} value={curso} onChange={(event) => setCurso(event.target.value)} /></Field>
+            <Field label="Disciplina"><input className={inputClass} value={disciplina} onChange={(event) => setDisciplina(event.target.value)} /></Field>
+          </div>
+        )}
+
+        {preset === "PENDENCIA_ANTERIOR" && (
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Field label="Mes origem"><input className={inputClass} value={origemMes} onChange={(event) => setOrigemMes(event.target.value.padStart(2, "0").slice(-2))} /></Field>
+            <Field label="Ano origem"><input className={inputClass} value={origemAno} onChange={(event) => setOrigemAno(event.target.value)} /></Field>
+            <Field label="Horas"><input className={inputClass} type="number" value={horasPagaveis} onChange={(event) => setHorasPagaveis(Number(event.target.value))} /></Field>
+            <Field label="Tipo">
+              <select className={inputClass} value={horasMajoradas > 0 ? "MAJORADO" : "NORMAL"} onChange={(event) => { setHorasMajoradas(event.target.value === "MAJORADO" ? horasPagaveis : 0); setHorasNormais(event.target.value === "NORMAL" ? horasPagaveis : 0); }}>
+                <option value="NORMAL">Normal</option>
+                <option value="MAJORADO">Majorado</option>
+              </select>
+            </Field>
+          </div>
+        )}
+
+        <button className={primaryButton} type="button" onClick={submit}><Plus size={18} /> Adicionar</button>
+        {notice && (
+          <p className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-800" role="status">
+            <CheckCircle2 size={18} /> {notice}
+          </p>
+        )}
+      </div>
+    </Section>
+  );
+}
