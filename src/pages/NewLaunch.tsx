@@ -34,8 +34,8 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
       item = createMgOrdinario(serviceDate, valores, state.feriados, "MG Ordinario", { pessoa });
     } else if (preset === "MG_EXTRA") {
       item = createMgExtra(serviceDate, valores, state.feriados, "MG Extra", { pessoa });
-    } else if (preset === "EXTRA_B5") {
-      item = createExtraB5({ serviceDate, valores, feriados: state.feriados, pessoa, horasNormais, horasMajoradas, horasPagaveis });
+    } else if (preset === "EXTRA_ADMINISTRATIVO") {
+      item = createExtraB5({ serviceDate, valores, feriados: state.feriados, pessoa });
     } else if (preset === "PENDENCIA_ANTERIOR") {
       item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores, pessoa });
     } else {
@@ -59,7 +59,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
           <select className={inputClass} value={preset} onChange={(event) => changePreset(event.target.value)}>
             <option value="MG_ORDINARIO">MG Ordinario</option>
             <option value="MG_EXTRA">MG Extra</option>
-            <option value="EXTRA_B5">Extra Administrativo</option>
+            <option value="EXTRA_ADMINISTRATIVO">Extra Administrativo</option>
             <option value="HORA_AULA">Hora-aula</option>
             <option value="PENDENCIA_ANTERIOR">Pendencia anterior</option>
           </select>
@@ -69,14 +69,6 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
           <Field label="Data da prontidao/servico">
             <input className={inputClass} type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} />
           </Field>
-        )}
-
-        {preset === "EXTRA_B5" && (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Horas normais"><input className={inputClass} type="number" value={horasNormais} onChange={(event) => setHorasNormais(Number(event.target.value))} /></Field>
-            <Field label="Horas majoradas"><input className={inputClass} type="number" value={horasMajoradas} onChange={(event) => setHorasMajoradas(Number(event.target.value))} /></Field>
-            <Field label="Horas pagaveis"><input className={inputClass} type="number" value={horasPagaveis} onChange={(event) => setHorasPagaveis(Number(event.target.value))} /></Field>
-          </div>
         )}
 
         {isAula && (

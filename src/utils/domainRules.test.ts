@@ -3,7 +3,7 @@ import type { AppState, Pessoa } from "../types";
 import { DEFAULT_PAY_TABLES } from "../data/payTables";
 import { DEFAULT_FERIADOS, DEFAULT_MILITAR, DEFAULT_VALUES } from "../store/defaults";
 import { markConflicts } from "./conflictUtils";
-import { createHoraAula, createMgExtra, createMgOrdinario } from "./launchFactory";
+import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from "./launchFactory";
 import { payTableToValues } from "./payTableUtils";
 import { calculateMonthlyTotals } from "./quotaUtils";
 import { generateWhatsAppReport } from "./reportUtils";
@@ -86,6 +86,13 @@ describe("regras de servico, cotas e conflitos", () => {
 
   it("MG Extra gera 24h pagaveis", () => {
     const launch = createMgExtra("2026-06-10", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Extra", { pessoa: cristian });
+    expect(launch.horasReais).toBe(24);
+    expect(launch.horasPagaveis).toBe(24);
+  });
+
+  it("Extra Administrativo gera 24h pagaveis automaticamente", () => {
+    const launch = createExtraB5({ serviceDate: "2026-06-10", valores: valuesFor("2º SGT"), feriados: DEFAULT_FERIADOS, pessoa: cristian });
+    expect(launch.tipo).toBe("EXTRA_ADMINISTRATIVO");
     expect(launch.horasReais).toBe(24);
     expect(launch.horasPagaveis).toBe(24);
   });

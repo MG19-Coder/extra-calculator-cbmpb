@@ -34,18 +34,32 @@ function getItemLabel(item: Lancamento): string {
 
 function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, endTime: string, valores: ValoresConfig, feriados: FeriadoEstadual[]): Lancamento {
   let updated: Lancamento;
+  const valoresUsados: ValoresConfig = {
+    ...valores,
+    extraNormalHora: item.valorHoraNormalUsado || item.valorHoraNormal || valores.extraNormalHora,
+    extraMajoradoHora: item.valorHoraMajoradaUsado || item.valorHoraMajorada || valores.extraMajoradoHora,
+    horaAulaCFSD: item.valorHoraAulaUsado || valores.horaAulaCFSD,
+    horaAulaCFS: item.valorHoraAulaUsado || valores.horaAulaCFS,
+    horaAulaCFO: item.valorHoraAulaUsado || valores.horaAulaCFO,
+  };
+  const pessoa = {
+    id: item.pessoaId,
+    nome: item.nomePessoa,
+    graduacao: item.graduacaoUsada,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+
   if (item.tipo === "MG_ORDINARIO") {
-    updated = createMgOrdinario(date, valores, feriados, item.titulo);
+    updated = createMgOrdinario(date, valoresUsados, feriados, item.titulo, { pessoa });
   } else if (item.tipo === "MG_EXTRA") {
-    updated = createMgExtra(date, valores, feriados, item.titulo);
+    updated = createMgExtra(date, valoresUsados, feriados, item.titulo, { pessoa });
   } else if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") {
     updated = createExtraB5({
       serviceDate: date,
-      valores,
+      valores: valoresUsados,
       feriados,
-      horasNormais: item.horasNormais,
-      horasMajoradas: item.horasMajoradas,
-      horasPagaveis: item.horasPagaveis,
+      pessoa,
     });
   } else {
     updated = createHoraAula({
@@ -54,7 +68,8 @@ function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, e
       subtipo: getHoraAulaSubtipo(item),
       disciplina: item.disciplina ?? item.observacoes,
       competenciaImplantacao: item.competenciaImplantacao,
-      valores,
+      valores: valoresUsados,
+      pessoa,
     });
   }
 
@@ -65,6 +80,8 @@ function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, e
     titulo: item.titulo,
     observacoes: updated.observacoes || item.observacoes,
     origemPendencia: item.origemPendencia,
+    createdAt: item.createdAt,
+    updatedAt: new Date().toISOString(),
   };
 }
 
