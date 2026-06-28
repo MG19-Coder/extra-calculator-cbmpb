@@ -1,6 +1,7 @@
 export type TipoLancamento =
   | "MG_ORDINARIO"
   | "MG_EXTRA"
+  | "EXTRA_ADMINISTRATIVO"
   | "EXTRA_B5"
   | "HORA_AULA"
   | "PENDENCIA_ANTERIOR"
@@ -46,6 +47,30 @@ export interface Militar {
   observacoes: string;
 }
 
+export interface Pessoa {
+  id: string;
+  nome: string;
+  graduacao: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayTable {
+  id: string;
+  graduacao: string;
+  valorHoraExtraNormal: number;
+  valorExtraNormal12h: number;
+  valorExtraNormal24h: number;
+  valorHoraExtraMajorado: number;
+  valorExtraMajorado12h: number;
+  valorExtraMajorado24h: number;
+  valorHoraAulaCFSD: number;
+  valorHoraAulaCFS: number;
+  valorHoraAulaCFO: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ValoresConfig {
   extraNormalHora: number;
   extraNormal12h: number;
@@ -71,6 +96,9 @@ export interface FeriadoEstadual {
 
 export interface Lancamento {
   id: string;
+  pessoaId: string;
+  nomePessoa: string;
+  graduacaoUsada: string;
   titulo: string;
   tipo: TipoLancamento;
   natureza: NaturezaLancamento;
@@ -86,6 +114,9 @@ export interface Lancamento {
   valorHoraNormal: number;
   valorHoraMajorada: number;
   valorHoraAula: number;
+  valorHoraNormalUsado: number;
+  valorHoraMajoradaUsado: number;
+  valorHoraAulaUsado: number;
   valorTotal: number;
   competenciaServico: string;
   competenciaImplantacao: string;
@@ -97,6 +128,8 @@ export interface Lancamento {
   subtipoHoraAula?: SubtipoHoraAula;
   curso?: string;
   disciplina?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Contracheque {
@@ -156,6 +189,9 @@ export interface MonthlyTotals {
 
 export interface AppState {
   selectedMonth: string;
+  activePessoaId: string;
+  pessoas: Pessoa[];
+  payTables: PayTable[];
   militar: Militar;
   valores: ValoresConfig;
   feriados: FeriadoEstadual[];

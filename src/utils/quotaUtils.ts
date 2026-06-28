@@ -6,6 +6,10 @@ function isInCompetencia(item: Lancamento, competencia: string): boolean {
   return item.competenciaImplantacao === competencia && item.status !== "CANCELADO";
 }
 
+function isActivePessoa(item: Lancamento, activePessoaId: string): boolean {
+  return !activePessoaId || item.pessoaId === activePessoaId;
+}
+
 export function calculateHelpCostQuota(horasAjudaCustoLancadas: number, limiteMensalAjudaCusto: number): { horasExcedentes: number; horasImplantaveis: number } {
   return {
     horasExcedentes: Math.max(0, horasAjudaCustoLancadas - limiteMensalAjudaCusto),
@@ -22,16 +26,16 @@ export function calculateClassHourLimit(horasAula: number, limiteMensalHoraAula:
 
 export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
   const marked = markConflicts(state.lancamentos);
-  const monthItems = marked.filter((item) => isInCompetencia(item, state.selectedMonth));
-  const helpCostItems = monthItems.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_B5", "PENDENCIA_ANTERIOR"].includes(item.tipo));
+  const monthItems = marked.filter((item) => isInCompetencia(item, state.selectedMonth) && isActivePessoa(item, state.activePessoaId));
+  const helpCostItems = monthItems.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5", "PENDENCIA_ANTERIOR"].includes(item.tipo));
   const classItems = monthItems.filter((item) => item.tipo === "HORA_AULA");
 
   const horasNormais = helpCostItems.reduce((sum, item) => sum + item.horasNormais, 0);
   const horasMajoradas = helpCostItems.reduce((sum, item) => sum + item.horasMajoradas, 0);
   const horasTotal = horasNormais + horasMajoradas;
   const quota = calculateHelpCostQuota(horasTotal, state.valores.limiteMensalAjudaCusto);
-  const valorNormal = Number((horasNormais * state.valores.extraNormalHora).toFixed(2));
-  const valorMajorado = Number((horasMajoradas * state.valores.extraMajoradoHora).toFixed(2));
+  const valorNormal = Number(helpCostItems.reduce((sum, item) => sum + item.horasNormais * (item.valorHoraNormalUsado ?? item.valorHoraNormal), 0).toFixed(2));
+  const valorMajorado = Number(helpCostItems.reduce((sum, item) => sum + item.horasMajoradas * (item.valorHoraMajoradaUsado ?? item.valorHoraMajorada), 0).toFixed(2));
 
   const classBy = (subtipo: "CFSD" | "CFS" | "CFO") => classItems.filter((item) => getHoraAulaSubtipo(item) === subtipo);
   const sumClass = (subtipo: "CFSD" | "CFS" | "CFO") => {
@@ -76,7 +80,7 @@ export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
       valorTotal: valorAula,
       excedeuTeto: classLimit.excedeuTeto,
     },
-    conflitos: marked.filter((item) => item.possuiConflito && item.competenciaImplantacao === state.selectedMonth),
+    conflitos: marked.filter((item) => item.possuiConflito && item.competenciaImplantacao === state.selectedMonth && isActivePessoa(item, state.activePessoaId)),
     pendencias: monthItems.filter((item) => item.tipo === "PENDENCIA_ANTERIOR"),
     implantado: {
       ajudaCusto: implantadoAjuda,

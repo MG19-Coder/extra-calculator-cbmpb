@@ -1,4 +1,4 @@
-import type { AppState, Militar, ValoresConfig } from "../types";
+import type { AppState, ValoresConfig } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 
 export function ValueSettings({ valores, onSave }: { valores: ValoresConfig; onSave: (valores: ValoresConfig) => void }) {
@@ -7,15 +7,6 @@ export function ValueSettings({ valores, onSave }: { valores: ValoresConfig; onS
   }
 
   const fields: Array<[keyof ValoresConfig, string]> = [
-    ["extraNormalHora", "Extra normal por hora"],
-    ["extraNormal12h", "Extra normal 12h"],
-    ["extraNormal24h", "Extra normal 24h"],
-    ["extraMajoradoHora", "Extra majorado por hora"],
-    ["extraMajorado12h", "Extra majorado 12h"],
-    ["extraMajorado24h", "Extra majorado 24h"],
-    ["horaAulaCFSD", "Hora-aula CFSD"],
-    ["horaAulaCFS", "Hora-aula CFS"],
-    ["horaAulaCFO", "Hora-aula CFO"],
     ["limiteMensalAjudaCusto", "Cota ajuda de custo"],
     ["limiteMensalHoraAula", "Teto hora-aula"],
   ];
@@ -33,20 +24,38 @@ export function ValueSettings({ valores, onSave }: { valores: ValoresConfig; onS
   );
 }
 
-export function MilitarSettings({ militar, onSave }: { militar: Militar; onSave: (militar: Militar) => void }) {
-  function setValue(key: keyof Militar, value: string) {
-    onSave({ ...militar, [key]: value });
-  }
-
+export function PayTablesView({ state }: { state: AppState }) {
   return (
-    <Section title="Configuracoes do militar">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Nome"><input className={inputClass} value={militar.nome} onChange={(event) => setValue("nome", event.target.value)} /></Field>
-        <Field label="Posto/graduacao"><input className={inputClass} value={militar.postoGraduacao} onChange={(event) => setValue("postoGraduacao", event.target.value)} /></Field>
-        <Field label="Matricula"><input className={inputClass} value={militar.matricula} onChange={(event) => setValue("matricula", event.target.value)} /></Field>
-        <Field label="Unidade"><input className={inputClass} value={militar.unidade} onChange={(event) => setValue("unidade", event.target.value)} /></Field>
-        <Field label="Funcao"><input className={inputClass} value={militar.funcao} onChange={(event) => setValue("funcao", event.target.value)} /></Field>
-        <Field label="Observacoes"><textarea className={inputClass} value={militar.observacoes} onChange={(event) => setValue("observacoes", event.target.value)} /></Field>
+    <Section title="Tabela de valores da planilha">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-slate-100 text-left text-xs uppercase text-slate-600">
+              <th className="p-2">Graduacao</th>
+              <th className="p-2">Normal/h</th>
+              <th className="p-2">Normal 24h</th>
+              <th className="p-2">Majorado/h</th>
+              <th className="p-2">Majorado 24h</th>
+              <th className="p-2">CFSD</th>
+              <th className="p-2">CFS</th>
+              <th className="p-2">CFO</th>
+            </tr>
+          </thead>
+          <tbody>
+            {state.payTables.map((row) => (
+              <tr key={row.id} className="border-t border-slate-200">
+                <td className="p-2 font-semibold">{row.graduacao}</td>
+                <td className="p-2">R$ {row.valorHoraExtraNormal.toFixed(2)}</td>
+                <td className="p-2">R$ {row.valorExtraNormal24h.toFixed(2)}</td>
+                <td className="p-2">R$ {row.valorHoraExtraMajorado.toFixed(2)}</td>
+                <td className="p-2">R$ {row.valorExtraMajorado24h.toFixed(2)}</td>
+                <td className="p-2">R$ {row.valorHoraAulaCFSD.toFixed(2)}</td>
+                <td className="p-2">R$ {row.valorHoraAulaCFS.toFixed(2)}</td>
+                <td className="p-2">R$ {row.valorHoraAulaCFO.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </Section>
   );
@@ -63,11 +72,11 @@ export function CalendarImportPlaceholder() {
   );
 }
 
-export function SettingsPage({ state, onValues, onMilitar }: { state: AppState; onValues: (values: ValoresConfig) => void; onMilitar: (militar: Militar) => void }) {
+export function SettingsPage({ state, onValues }: { state: AppState; onValues: (values: ValoresConfig) => void }) {
   return (
     <div className="grid gap-4">
       <ValueSettings valores={state.valores} onSave={onValues} />
-      <MilitarSettings militar={state.militar} onSave={onMilitar} />
+      <PayTablesView state={state} />
       <CalendarImportPlaceholder />
     </div>
   );

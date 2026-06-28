@@ -10,11 +10,13 @@ function sumByType(items: Lancamento[], tipo: Lancamento["tipo"]) {
 }
 
 export function generateWhatsAppReport(state: AppState, totals: MonthlyTotals): string {
-  const items = state.lancamentos.filter((item) => item.competenciaImplantacao === state.selectedMonth && item.status !== "CANCELADO");
+  const items = state.lancamentos.filter((item) => item.competenciaImplantacao === state.selectedMonth && item.pessoaId === state.activePessoaId && item.status !== "CANCELADO");
   const mgOrd = sumByType(items, "MG_ORDINARIO");
   const mgExtra = sumByType(items, "MG_EXTRA");
-  const b5 = sumByType(items, "EXTRA_B5");
-  const militar = [state.militar.postoGraduacao, state.militar.nome].filter(Boolean).join(" ") || "Nao informado";
+  const b5 = sumByType(items, "EXTRA_ADMINISTRATIVO");
+  const pessoa = state.pessoas.find((item) => item.id === state.activePessoaId);
+  const militar = pessoa?.nome || "Nao informado";
+  const graduacao = pessoa?.graduacao || "Nao informada";
   const conflicts = totals.conflitos.length
     ? `Conflitos encontrados: ${totals.conflitos.map((item) => item.titulo).join(", ")}.`
     : "Nao foram identificados conflitos de horario.";
@@ -22,7 +24,7 @@ export function generateWhatsAppReport(state: AppState, totals: MonthlyTotals): 
   return `# Extras ${getMonthName(state.selectedMonth)}
 
 Militar: ${militar}
-Matricula: ${state.militar.matricula || "Nao informada"}
+Graduacao: ${graduacao}
 
 Cota ajuda de custo: ${state.valores.limiteMensalAjudaCusto}h
 

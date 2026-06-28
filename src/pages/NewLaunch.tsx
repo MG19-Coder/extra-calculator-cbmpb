@@ -3,8 +3,12 @@ import { useState } from "react";
 import type { AppState, Lancamento, SubtipoHoraAula } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
+import { getActivePessoa, getPayTableForGraduacao, payTableToValues } from "../utils/payTableUtils";
 
 export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: Lancamento[]) => void }) {
+  const pessoa = getActivePessoa(state.pessoas, state.activePessoaId);
+  const payTable = getPayTableForGraduacao(state.payTables, pessoa.graduacao);
+  const valores = payTableToValues(payTable, state.valores);
   const [preset, setPreset] = useState("MG_ORDINARIO");
   const [serviceDate, setServiceDate] = useState(`${state.selectedMonth}-10`);
   const [aulaDate, setAulaDate] = useState(`${state.selectedMonth}-10`);
@@ -27,17 +31,17 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
   function submit() {
     let item: Lancamento;
     if (preset === "MG_ORDINARIO") {
-      item = createMgOrdinario(serviceDate, state.valores, state.feriados);
+      item = createMgOrdinario(serviceDate, valores, state.feriados, "MG Ordinario", { pessoa });
     } else if (preset === "MG_EXTRA") {
-      item = createMgExtra(serviceDate, state.valores, state.feriados);
+      item = createMgExtra(serviceDate, valores, state.feriados, "MG Extra", { pessoa });
     } else if (preset === "EXTRA_B5") {
-      item = createExtraB5({ serviceDate, valores: state.valores, feriados: state.feriados, horasNormais, horasMajoradas, horasPagaveis });
+      item = createExtraB5({ serviceDate, valores, feriados: state.feriados, pessoa, horasNormais, horasMajoradas, horasPagaveis });
     } else if (preset === "PENDENCIA_ANTERIOR") {
-      item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores: state.valores });
+      item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores, pessoa });
     } else {
       const inicio = `${aulaDate}T${horaInicioAula}`;
       const fim = `${aulaDate}T${horaFimAula}`;
-      item = createHoraAula({ inicio, fim, subtipo: subtipoHoraAula, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores: state.valores });
+      item = createHoraAula({ inicio, fim, subtipo: subtipoHoraAula, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores, pessoa });
     }
     onAdd([item]);
     setNotice(`${item.titulo} lancado com sucesso. ${item.horasPagaveis}h registradas para ${item.competenciaImplantacao}.`);
@@ -48,6 +52,9 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
   return (
     <Section title="Novo lancamento">
       <div className="grid gap-4">
+        <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+          Pessoa ativa: <strong>{pessoa.nome}</strong> - {pessoa.graduacao}
+        </p>
         <Field label="Preset rapido">
           <select className={inputClass} value={preset} onChange={(event) => changePreset(event.target.value)}>
             <option value="MG_ORDINARIO">MG Ordinario</option>

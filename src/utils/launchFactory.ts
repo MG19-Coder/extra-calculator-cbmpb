@@ -1,4 +1,4 @@
-import type { CategoriaPagamento, FeriadoEstadual, Lancamento, StatusLancamento, SubtipoHoraAula, ValoresConfig } from "../types";
+import type { CategoriaPagamento, FeriadoEstadual, Lancamento, Pessoa, StatusLancamento, SubtipoHoraAula, ValoresConfig } from "../types";
 import { addDays, calculateRealHours, getCompetencia, parseLocalDate, toDateInput, toDateTimeInput } from "./dateUtils";
 import { calculateClassHours, calculateClassValue, calculateClassifiedHours, calculateHelpCostValue, generateHelpCostBlocks } from "./paymentBlocks";
 
@@ -10,7 +10,24 @@ function baseStatus(): StatusLancamento {
   return "LANCADO";
 }
 
-export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, feriados: FeriadoEstadual[], title = "MG Ordinario"): Lancamento {
+interface LaunchContext {
+  pessoa?: Pessoa;
+  now?: string;
+}
+
+function launchMeta(context?: LaunchContext) {
+  const now = context?.now ?? new Date().toISOString();
+  const pessoa = context?.pessoa;
+  return {
+    pessoaId: pessoa?.id ?? "pessoa-padrao",
+    nomePessoa: pessoa?.nome ?? "Pessoa padrao",
+    graduacaoUsada: pessoa?.graduacao ?? "2º SGT",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, feriados: FeriadoEstadual[], title = "MG Ordinario", context?: LaunchContext): Lancamento {
   const serviceDay = parseLocalDate(serviceDate);
   const inicio = toDateTimeInput(parseLocalDate(toDateInput(addDays(serviceDay, -1)), 18));
   const fim = toDateTimeInput(parseLocalDate(serviceDate, 18));
@@ -19,6 +36,7 @@ export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, f
   const valorTotal = calculateHelpCostValue(classified.horasNormais, classified.horasMajoradas, valores);
 
   return {
+    ...launchMeta(context),
     id: id("mg-ord"),
     titulo: title,
     tipo: "MG_ORDINARIO",
@@ -35,6 +53,9 @@ export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, f
     valorHoraNormal: valores.extraNormalHora,
     valorHoraMajorada: valores.extraMajoradoHora,
     valorHoraAula: 0,
+    valorHoraNormalUsado: valores.extraNormalHora,
+    valorHoraMajoradaUsado: valores.extraMajoradoHora,
+    valorHoraAulaUsado: 0,
     valorTotal,
     competenciaServico: getCompetencia(`${serviceDate}T00:00`),
     competenciaImplantacao: getCompetencia(`${serviceDate}T00:00`),
@@ -46,7 +67,7 @@ export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, f
   };
 }
 
-export function createMgExtra(serviceDate: string, valores: ValoresConfig, feriados: FeriadoEstadual[], title = "MG Extra"): Lancamento {
+export function createMgExtra(serviceDate: string, valores: ValoresConfig, feriados: FeriadoEstadual[], title = "MG Extra", context?: LaunchContext): Lancamento {
   const serviceDay = parseLocalDate(serviceDate);
   const inicio = toDateTimeInput(parseLocalDate(toDateInput(addDays(serviceDay, -1)), 18));
   const fim = toDateTimeInput(parseLocalDate(serviceDate, 18));
@@ -55,6 +76,7 @@ export function createMgExtra(serviceDate: string, valores: ValoresConfig, feria
   const valorTotal = calculateHelpCostValue(classified.horasNormais, classified.horasMajoradas, valores);
 
   return {
+    ...launchMeta(context),
     id: id("mg-extra"),
     titulo: title,
     tipo: "MG_EXTRA",
@@ -71,6 +93,9 @@ export function createMgExtra(serviceDate: string, valores: ValoresConfig, feria
     valorHoraNormal: valores.extraNormalHora,
     valorHoraMajorada: valores.extraMajoradoHora,
     valorHoraAula: 0,
+    valorHoraNormalUsado: valores.extraNormalHora,
+    valorHoraMajoradaUsado: valores.extraMajoradoHora,
+    valorHoraAulaUsado: 0,
     valorTotal,
     competenciaServico: getCompetencia(`${serviceDate}T00:00`),
     competenciaImplantacao: getCompetencia(`${serviceDate}T00:00`),
@@ -86,6 +111,7 @@ export function createExtraB5(params: {
   serviceDate: string;
   valores: ValoresConfig;
   feriados: FeriadoEstadual[];
+  pessoa?: Pessoa;
   horasNormais?: number;
   horasMajoradas?: number;
   horasPagaveis?: number;
@@ -96,7 +122,7 @@ export function createExtraB5(params: {
   const inicio = params.inicio || toDateTimeInput(parseLocalDate(toDateInput(addDays(serviceDay, -1)), 18));
   const fim = params.fim || toDateTimeInput(parseLocalDate(params.serviceDate, 18));
   const manual = params.horasNormais !== undefined || params.horasMajoradas !== undefined || params.horasPagaveis !== undefined;
-  const blocks = manual ? [] : generateHelpCostBlocks(params.serviceDate, "EXTRA_B5", params.feriados);
+  const blocks = manual ? [] : generateHelpCostBlocks(params.serviceDate, "EXTRA_ADMINISTRATIVO", params.feriados);
   const classified = manual
     ? {
         horasNormais: params.horasNormais ?? 0,
@@ -106,9 +132,10 @@ export function createExtraB5(params: {
     : calculateClassifiedHours(blocks);
 
   return {
+    ...launchMeta({ pessoa: params.pessoa }),
     id: id("b5"),
     titulo: "Extra Administrativo",
-    tipo: "EXTRA_B5",
+    tipo: "EXTRA_ADMINISTRATIVO",
     natureza: "B5",
     categoriaPagamento: classified.categoria,
     dataHoraInicio: inicio,
@@ -122,6 +149,9 @@ export function createExtraB5(params: {
     valorHoraNormal: params.valores.extraNormalHora,
     valorHoraMajorada: params.valores.extraMajoradoHora,
     valorHoraAula: 0,
+    valorHoraNormalUsado: params.valores.extraNormalHora,
+    valorHoraMajoradaUsado: params.valores.extraMajoradoHora,
+    valorHoraAulaUsado: 0,
     valorTotal: calculateHelpCostValue(classified.horasNormais, classified.horasMajoradas, params.valores),
     competenciaServico: getCompetencia(`${params.serviceDate}T00:00`),
     competenciaImplantacao: getCompetencia(`${params.serviceDate}T00:00`),
@@ -140,6 +170,7 @@ export function createHoraAula(params: {
   disciplina: string;
   competenciaImplantacao?: string;
   valores: ValoresConfig;
+  pessoa?: Pessoa;
 }): Lancamento {
   const valorHora = params.subtipo === "CFSD"
     ? params.valores.horaAulaCFSD
@@ -149,6 +180,7 @@ export function createHoraAula(params: {
   const horas = calculateClassHours(params.inicio, params.fim);
 
   return {
+    ...launchMeta({ pessoa: params.pessoa }),
     id: id("aula"),
     titulo: `Hora-aula ${params.subtipo}`,
     tipo: "HORA_AULA",
@@ -165,6 +197,9 @@ export function createHoraAula(params: {
     valorHoraNormal: 0,
     valorHoraMajorada: 0,
     valorHoraAula: valorHora,
+    valorHoraNormalUsado: 0,
+    valorHoraMajoradaUsado: 0,
+    valorHoraAulaUsado: valorHora,
     valorTotal: calculateClassValue(horas, valorHora),
     competenciaServico: getCompetencia(params.inicio),
     competenciaImplantacao: params.competenciaImplantacao ?? getCompetencia(params.inicio),
@@ -186,11 +221,13 @@ export function createPendenciaAnterior(params: {
   horas: number;
   tipo: "NORMAL" | "MAJORADO";
   valores: ValoresConfig;
+  pessoa?: Pessoa;
 }): Lancamento {
   const date = `${params.competenciaImplantacao}-01T00:00`;
   const horasNormais = params.tipo === "NORMAL" ? params.horas : 0;
   const horasMajoradas = params.tipo === "MAJORADO" ? params.horas : 0;
   return {
+    ...launchMeta({ pessoa: params.pessoa }),
     id: id("pend"),
     titulo: `Pendencia ${params.mesOrigem}/${params.anoOrigem}`,
     tipo: "PENDENCIA_ANTERIOR",
@@ -207,6 +244,9 @@ export function createPendenciaAnterior(params: {
     valorHoraNormal: params.valores.extraNormalHora,
     valorHoraMajorada: params.valores.extraMajoradoHora,
     valorHoraAula: 0,
+    valorHoraNormalUsado: params.valores.extraNormalHora,
+    valorHoraMajoradaUsado: params.valores.extraMajoradoHora,
+    valorHoraAulaUsado: 0,
     valorTotal: calculateHelpCostValue(horasNormais, horasMajoradas, params.valores),
     competenciaServico: `${params.anoOrigem}-${params.mesOrigem}`,
     competenciaImplantacao: params.competenciaImplantacao,

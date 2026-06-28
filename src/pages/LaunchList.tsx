@@ -7,7 +7,7 @@ import { getHoraAulaSubtipo } from "../utils/launchCompatibility";
 function displayType(item: Lancamento): string {
   if (item.tipo === "MG_ORDINARIO") return "Prontidao";
   if (item.tipo === "MG_EXTRA") return "Extra";
-  if (item.tipo === "EXTRA_B5") return "Extra Administrativo";
+  if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "Extra Administrativo";
   if (item.tipo === "HORA_AULA") return `Aula ${getHoraAulaSubtipo(item)}`;
   if (item.tipo === "PENDENCIA_ANTERIOR") return "Pendencia anterior";
   return item.tipo;

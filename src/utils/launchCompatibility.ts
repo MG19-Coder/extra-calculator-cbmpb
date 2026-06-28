@@ -1,4 +1,4 @@
-import type { Lancamento, SubtipoHoraAula } from "../types";
+import type { Lancamento, Pessoa, SubtipoHoraAula } from "../types";
 
 export function getHoraAulaSubtipo(item: Lancamento): SubtipoHoraAula {
   if (item.subtipoHoraAula) return item.subtipoHoraAula;
@@ -8,29 +8,43 @@ export function getHoraAulaSubtipo(item: Lancamento): SubtipoHoraAula {
   return "CFS";
 }
 
-export function normalizeLaunch(item: Lancamento): Lancamento {
-  if (item.tipo === "HORA_AULA") {
-    const subtipoHoraAula = getHoraAulaSubtipo(item);
+export function normalizeLaunch(item: Lancamento, fallbackPessoa?: Pessoa): Lancamento {
+  const now = new Date().toISOString();
+  const base = {
+    ...item,
+    pessoaId: item.pessoaId ?? fallbackPessoa?.id ?? "pessoa-padrao",
+    nomePessoa: item.nomePessoa ?? fallbackPessoa?.nome ?? "Pessoa padrao",
+    graduacaoUsada: item.graduacaoUsada ?? fallbackPessoa?.graduacao ?? "2º SGT",
+    valorHoraNormalUsado: item.valorHoraNormalUsado ?? item.valorHoraNormal ?? 0,
+    valorHoraMajoradaUsado: item.valorHoraMajoradaUsado ?? item.valorHoraMajorada ?? 0,
+    valorHoraAulaUsado: item.valorHoraAulaUsado ?? item.valorHoraAula ?? 0,
+    createdAt: item.createdAt ?? now,
+    updatedAt: item.updatedAt ?? now,
+  };
+
+  if (base.tipo === "HORA_AULA") {
+    const subtipoHoraAula = getHoraAulaSubtipo(base);
     return {
-      ...item,
-      titulo: item.titulo && !item.titulo.includes("Instrucao") && !item.titulo.includes("Outra") ? item.titulo : `Hora-aula ${subtipoHoraAula}`,
+      ...base,
+      titulo: base.titulo && !base.titulo.includes("Instrucao") && !base.titulo.includes("Outra") ? base.titulo : `Hora-aula ${subtipoHoraAula}`,
       categoriaPagamento: "HORA_AULA",
       subtipoHoraAula,
       curso: subtipoHoraAula,
     };
   }
 
-  if (item.tipo === "EXTRA_B5") {
+  if (base.tipo === "EXTRA_B5" || base.tipo === "EXTRA_ADMINISTRATIVO") {
     return {
-      ...item,
-      titulo: item.titulo === "Extra B5" || item.titulo.includes("B5") ? "Extra Administrativo" : item.titulo,
-      observacoes: item.observacoes.replace(/B5/g, "Extra administrativo"),
+      ...base,
+      tipo: "EXTRA_ADMINISTRATIVO",
+      titulo: base.titulo === "Extra B5" || base.titulo.includes("B5") ? "Extra Administrativo" : base.titulo,
+      observacoes: base.observacoes.replace(/B5/g, "Extra administrativo"),
     };
   }
 
-  return item;
+  return base;
 }
 
-export function normalizeLaunches(items: Lancamento[]): Lancamento[] {
-  return items.map(normalizeLaunch);
+export function normalizeLaunches(items: Lancamento[], fallbackPessoa?: Pessoa): Lancamento[] {
+  return items.map((item) => normalizeLaunch(item, fallbackPessoa));
 }

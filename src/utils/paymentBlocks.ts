@@ -29,7 +29,7 @@ export function classifyBlock(dataReferencia: string, feriados: FeriadoEstadual[
   return { classificacao: "NORMAL", motivo: "Dia util de segunda a quinta" };
 }
 
-export function generateHelpCostBlocks(serviceDate: string, kind: "MG_ORDINARIO" | "MG_EXTRA" | "EXTRA_B5", feriados: FeriadoEstadual[]): PaymentBlock[] {
+export function generateHelpCostBlocks(serviceDate: string, kind: "MG_ORDINARIO" | "MG_EXTRA" | "EXTRA_ADMINISTRATIVO" | "EXTRA_B5", feriados: FeriadoEstadual[]): PaymentBlock[] {
   const serviceDay = parseLocalDate(serviceDate);
   const previousDay = addDays(serviceDay, -1);
   const nightStart = parseLocalDate(toDateInput(previousDay), 18);

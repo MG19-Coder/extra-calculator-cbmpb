@@ -3,13 +3,16 @@ import { useState } from "react";
 import type { AppState, Lancamento } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 import { generateScale24x48 } from "../utils/scaleUtils";
+import { getActivePessoa, getPayTableForGraduacao, payTableToValues } from "../utils/payTableUtils";
 
 export function ScaleGenerator({ state, onAdd }: { state: AppState; onAdd: (items: Lancamento[]) => void }) {
+  const pessoa = getActivePessoa(state.pessoas, state.activePessoaId);
+  const valores = payTableToValues(getPayTableForGraduacao(state.payTables, pessoa.graduacao), state.valores);
   const [firstServiceDate, setFirstServiceDate] = useState(`${state.selectedMonth}-01`);
   const [generated, setGenerated] = useState(0);
 
   function submit() {
-    const items = generateScale24x48({ firstServiceDate, competencia: state.selectedMonth, valores: state.valores, feriados: state.feriados });
+    const items = generateScale24x48({ firstServiceDate, competencia: state.selectedMonth, valores, feriados: state.feriados, pessoa });
     onAdd(items);
     setGenerated(items.length);
   }

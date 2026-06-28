@@ -19,7 +19,7 @@ function getItemStyle(item: Lancamento): string {
   if (item.possuiConflito) return "bg-red-100 text-red-800 ring-1 ring-red-200";
   if (item.tipo === "MG_ORDINARIO") return "bg-white text-slate-700 ring-1 ring-slate-200";
   if (item.tipo === "MG_EXTRA") return "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200";
-  if (item.tipo === "EXTRA_B5") return "bg-sky-50 text-sky-800 ring-1 ring-sky-200";
+  if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "bg-sky-50 text-sky-800 ring-1 ring-sky-200";
   if (item.tipo === "HORA_AULA") return "bg-violet-50 text-violet-800 ring-1 ring-violet-200";
   return "bg-slate-100 text-slate-700 ring-1 ring-slate-200";
 }
@@ -27,7 +27,7 @@ function getItemStyle(item: Lancamento): string {
 function getItemLabel(item: Lancamento): string {
   if (item.tipo === "MG_ORDINARIO") return "Prontidao";
   if (item.tipo === "MG_EXTRA") return "Extra";
-  if (item.tipo === "EXTRA_B5") return "Extra Administrativo";
+  if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "Extra Administrativo";
   if (item.tipo === "HORA_AULA") return "Aula";
   return item.tipo;
 }
@@ -38,7 +38,7 @@ function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, e
     updated = createMgOrdinario(date, valores, feriados, item.titulo);
   } else if (item.tipo === "MG_EXTRA") {
     updated = createMgExtra(date, valores, feriados, item.titulo);
-  } else if (item.tipo === "EXTRA_B5") {
+  } else if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") {
     updated = createExtraB5({
       serviceDate: date,
       valores,
@@ -73,16 +73,18 @@ export function CalendarMonth({
   items,
   feriados,
   valores,
+  activePessoaId,
   onUpdate,
 }: {
   competencia: string;
   items: Lancamento[];
   feriados: FeriadoEstadual[];
   valores: ValoresConfig;
+  activePessoaId: string;
   onUpdate: (item: Lancamento) => void;
 }) {
   const days = listMonthDays(competencia);
-  const calendarItems = items.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_B5", "HORA_AULA"].includes(item.tipo));
+  const calendarItems = items.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5", "HORA_AULA"].includes(item.tipo) && item.pessoaId === activePessoaId);
   const [editing, setEditing] = useState<Lancamento | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editStart, setEditStart] = useState("00:00");
