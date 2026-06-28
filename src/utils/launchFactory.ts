@@ -1,4 +1,4 @@
-import type { CategoriaPagamento, FeriadoEstadual, Lancamento, StatusLancamento, ValoresConfig } from "../types";
+import type { CategoriaPagamento, FeriadoEstadual, Lancamento, StatusLancamento, SubtipoHoraAula, ValoresConfig } from "../types";
 import { addDays, calculateRealHours, getCompetencia, parseLocalDate, toDateInput, toDateTimeInput } from "./dateUtils";
 import { calculateClassHours, calculateClassValue, calculateClassifiedHours, calculateHelpCostValue, generateHelpCostBlocks } from "./paymentBlocks";
 
@@ -107,7 +107,7 @@ export function createExtraB5(params: {
 
   return {
     id: id("b5"),
-    titulo: "Extra B5",
+    titulo: "Extra Administrativo",
     tipo: "EXTRA_B5",
     natureza: "B5",
     categoriaPagamento: classified.categoria,
@@ -126,7 +126,7 @@ export function createExtraB5(params: {
     competenciaServico: getCompetencia(`${params.serviceDate}T00:00`),
     competenciaImplantacao: getCompetencia(`${params.serviceDate}T00:00`),
     status: baseStatus(),
-    observacoes: manual ? "B5 informado manualmente." : "B5 com preset 18h as 18h.",
+    observacoes: manual ? "Extra administrativo informado manualmente." : "Extra administrativo com preset 18h as 18h.",
     origemPendencia: "",
     possuiConflito: false,
     idsConflitantes: [],
@@ -136,27 +136,24 @@ export function createExtraB5(params: {
 export function createHoraAula(params: {
   inicio: string;
   fim: string;
-  categoria: Extract<CategoriaPagamento, "HORA_AULA_INSTRUCAO" | "HORA_AULA_CFSD" | "HORA_AULA_CFS" | "HORA_AULA_CFO" | "HORA_AULA_OUTRA">;
-  curso: string;
+  subtipo: SubtipoHoraAula;
   disciplina: string;
   competenciaImplantacao?: string;
   valores: ValoresConfig;
 }): Lancamento {
-  const valorHora = params.categoria === "HORA_AULA_CFSD"
+  const valorHora = params.subtipo === "CFSD"
     ? params.valores.horaAulaCFSD
-    : params.categoria === "HORA_AULA_CFS"
+    : params.subtipo === "CFS"
       ? params.valores.horaAulaCFS
-      : params.categoria === "HORA_AULA_CFO"
-        ? params.valores.horaAulaCFO
-        : params.valores.horaAulaOutra;
+      : params.valores.horaAulaCFO;
   const horas = calculateClassHours(params.inicio, params.fim);
 
   return {
     id: id("aula"),
-    titulo: `Hora-aula ${params.curso}`,
+    titulo: `Hora-aula ${params.subtipo}`,
     tipo: "HORA_AULA",
     natureza: "MAGISTERIO",
-    categoriaPagamento: params.categoria,
+    categoriaPagamento: "HORA_AULA",
     dataHoraInicio: params.inicio,
     dataHoraFim: params.fim,
     dataReferenciaServico: params.inicio.slice(0, 10),
@@ -176,7 +173,8 @@ export function createHoraAula(params: {
     origemPendencia: "",
     possuiConflito: false,
     idsConflitantes: [],
-    curso: params.curso,
+    subtipoHoraAula: params.subtipo,
+    curso: params.subtipo,
     disciplina: params.disciplina,
   };
 }

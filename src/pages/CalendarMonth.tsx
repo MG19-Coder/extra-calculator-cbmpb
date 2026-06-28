@@ -5,7 +5,8 @@ import { formatDate, listMonthDays, toDateInput } from "../utils/dateUtils";
 import { Field, inputClass, primaryButton, secondaryButton, Section } from "../components/ui";
 import { findHolidayForDate } from "../utils/holidayUtils";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from "../utils/launchFactory";
-import type { ValoresConfig } from "../types";
+import type { SubtipoHoraAula, ValoresConfig } from "../types";
+import { getHoraAulaSubtipo } from "../utils/launchCompatibility";
 
 function getCalendarDate(item: Lancamento): string {
   if (item.tipo === "HORA_AULA") {
@@ -26,7 +27,7 @@ function getItemStyle(item: Lancamento): string {
 function getItemLabel(item: Lancamento): string {
   if (item.tipo === "MG_ORDINARIO") return "Prontidao";
   if (item.tipo === "MG_EXTRA") return "Extra";
-  if (item.tipo === "EXTRA_B5") return "B5";
+  if (item.tipo === "EXTRA_B5") return "Extra Administrativo";
   if (item.tipo === "HORA_AULA") return "Aula";
   return item.tipo;
 }
@@ -50,8 +51,7 @@ function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, e
     updated = createHoraAula({
       inicio: `${date}T${startTime}`,
       fim: `${date}T${endTime}`,
-      categoria: item.categoriaPagamento as "HORA_AULA_INSTRUCAO" | "HORA_AULA_CFSD" | "HORA_AULA_CFS" | "HORA_AULA_CFO" | "HORA_AULA_OUTRA",
-      curso: item.curso ?? "Instrucao",
+      subtipo: getHoraAulaSubtipo(item),
       disciplina: item.disciplina ?? item.observacoes,
       competenciaImplantacao: item.competenciaImplantacao,
       valores,
@@ -87,17 +87,20 @@ export function CalendarMonth({
   const [editDate, setEditDate] = useState("");
   const [editStart, setEditStart] = useState("00:00");
   const [editEnd, setEditEnd] = useState("15:00");
+  const [editSubtipo, setEditSubtipo] = useState<SubtipoHoraAula>("CFS");
 
   useEffect(() => {
     if (!editing) return;
     setEditDate(getCalendarDate(editing));
     setEditStart(editing.dataHoraInicio.slice(11, 16));
     setEditEnd(editing.dataHoraFim.slice(11, 16));
+    setEditSubtipo(getHoraAulaSubtipo(editing));
   }, [editing]);
 
   function saveEditing() {
     if (!editing) return;
-    onUpdate(buildUpdatedLaunch(editing, editDate, editStart, editEnd, valores, feriados));
+    const itemToSave = editing.tipo === "HORA_AULA" ? { ...editing, subtipoHoraAula: editSubtipo, curso: editSubtipo } : editing;
+    onUpdate(buildUpdatedLaunch(itemToSave, editDate, editStart, editEnd, valores, feriados));
     setEditing(null);
   }
 
@@ -125,6 +128,15 @@ export function CalendarMonth({
               <Field label="Fim">
                 <input className={inputClass} type="time" value={editEnd} onChange={(event) => setEditEnd(event.target.value)} disabled={editing.tipo !== "HORA_AULA"} />
               </Field>
+              {editing.tipo === "HORA_AULA" && (
+                <Field label="Curso/tipo de aula">
+                  <select className={inputClass} value={editSubtipo} onChange={(event) => setEditSubtipo(event.target.value as SubtipoHoraAula)}>
+                    <option value="CFSD">CFSD</option>
+                    <option value="CFS">CFS</option>
+                    <option value="CFO">CFO</option>
+                  </select>
+                </Field>
+              )}
             </div>
             {editing.tipo !== "HORA_AULA" && <p className="mt-3 text-xs text-slate-500">Para servicos 24h, o horario real segue o padrao 18h do dia anterior ate 18h do dia informado.</p>}
             <div className="mt-4 flex flex-wrap gap-2">
@@ -150,7 +162,7 @@ export function CalendarMonth({
                   {dayItems.map((item) => (
                     <button key={item.id} type="button" onClick={() => setEditing(item)} className={`rounded px-2 py-1 text-left text-xs font-medium ${getItemStyle(item)}`}>
                       <span className="mr-1 font-bold">{getItemLabel(item)}:</span>
-                      {item.tipo === "HORA_AULA" ? `${item.horasAula}h ${item.curso ?? ""}` : `${item.horasPagaveis}h`}
+                      {item.tipo === "HORA_AULA" ? `${item.horasAula}h ${getHoraAulaSubtipo(item)}` : `${item.horasPagaveis}h`}
                     </button>
                   ))}
                 </div>

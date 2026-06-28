@@ -2,6 +2,16 @@ import { Trash2 } from "lucide-react";
 import type { Lancamento } from "../types";
 import { formatCurrency, formatDateTime } from "../utils/dateUtils";
 import { iconButton, Section } from "../components/ui";
+import { getHoraAulaSubtipo } from "../utils/launchCompatibility";
+
+function displayType(item: Lancamento): string {
+  if (item.tipo === "MG_ORDINARIO") return "Prontidao";
+  if (item.tipo === "MG_EXTRA") return "Extra";
+  if (item.tipo === "EXTRA_B5") return "Extra Administrativo";
+  if (item.tipo === "HORA_AULA") return `Aula ${getHoraAulaSubtipo(item)}`;
+  if (item.tipo === "PENDENCIA_ANTERIOR") return "Pendencia anterior";
+  return item.tipo;
+}
 
 export function LaunchList({ items, onRemove }: { items: Lancamento[]; onRemove: (id: string) => void }) {
   return (
@@ -20,7 +30,7 @@ export function LaunchList({ items, onRemove }: { items: Lancamento[]; onRemove:
               </button>
             </div>
             <div className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
-              <span>Tipo: <strong>{item.tipo}</strong></span>
+              <span>Tipo: <strong>{displayType(item)}</strong></span>
               <span>Pagaveis: <strong>{item.horasPagaveis}h</strong></span>
               <span>Aula: <strong>{item.horasAula}h</strong></span>
               <span>Valor: <strong>{formatCurrency(item.valorTotal)}</strong></span>

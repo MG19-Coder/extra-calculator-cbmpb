@@ -38,7 +38,7 @@ MG Extra:
 * Total: ${mgExtra.total}h
 * Valor: ${formatCurrency(mgExtra.valor)}
 
-Extra B5:
+Extra Administrativo:
 * Horas normais: ${b5.horasNormais}h
 * Horas majoradas: ${b5.horasMajoradas}h
 * Total: ${b5.total}h
@@ -57,7 +57,6 @@ Horas-aula:
 * CFSD: ${totals.horaAula.cfsd.horas}h - ${formatCurrency(totals.horaAula.cfsd.valor)}
 * CFS: ${totals.horaAula.cfs.horas}h - ${formatCurrency(totals.horaAula.cfs.valor)}
 * CFO: ${totals.horaAula.cfo.horas}h - ${formatCurrency(totals.horaAula.cfo.valor)}
-* Instrucao/Outras: ${totals.horaAula.outras.horas}h - ${formatCurrency(totals.horaAula.outras.valor)}
 * Total de horas-aula: ${totals.horaAula.horasTotal}h de ${state.valores.limiteMensalHoraAula}h
 * Valor previsto de hora-aula: ${formatCurrency(totals.horaAula.valorTotal)}
 

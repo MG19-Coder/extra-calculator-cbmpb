@@ -1,6 +1,6 @@
 import { CheckCircle2, Plus } from "lucide-react";
 import { useState } from "react";
-import type { AppState, CategoriaPagamento, Lancamento } from "../types";
+import type { AppState, Lancamento, SubtipoHoraAula } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
 
@@ -11,7 +11,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
   const [horaInicioAula, setHoraInicioAula] = useState("00:00");
   const [horaFimAula, setHoraFimAula] = useState("15:00");
   const [competenciaImplantacaoAula, setCompetenciaImplantacaoAula] = useState(state.selectedMonth);
-  const [curso, setCurso] = useState("Instrucao");
+  const [subtipoHoraAula, setSubtipoHoraAula] = useState<SubtipoHoraAula>("CFS");
   const [disciplina, setDisciplina] = useState("Instrucao");
   const [horasNormais, setHorasNormais] = useState(12);
   const [horasMajoradas, setHorasMajoradas] = useState(12);
@@ -22,11 +22,6 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
 
   function changePreset(value: string) {
     setPreset(value);
-    if (value === "HORA_AULA_INSTRUCAO") setCurso("Instrucao");
-    if (value === "HORA_AULA_CFSD") setCurso("CFSD");
-    if (value === "HORA_AULA_CFS") setCurso("CFS");
-    if (value === "HORA_AULA_CFO") setCurso("CFO");
-    if (value === "HORA_AULA_OUTRA") setCurso("Outra");
   }
 
   function submit() {
@@ -40,16 +35,15 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
     } else if (preset === "PENDENCIA_ANTERIOR") {
       item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores: state.valores });
     } else {
-      const categoria = preset as Extract<CategoriaPagamento, "HORA_AULA_INSTRUCAO" | "HORA_AULA_CFSD" | "HORA_AULA_CFS" | "HORA_AULA_CFO" | "HORA_AULA_OUTRA">;
       const inicio = `${aulaDate}T${horaInicioAula}`;
       const fim = `${aulaDate}T${horaFimAula}`;
-      item = createHoraAula({ inicio, fim, categoria, curso, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores: state.valores });
+      item = createHoraAula({ inicio, fim, subtipo: subtipoHoraAula, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores: state.valores });
     }
     onAdd([item]);
     setNotice(`${item.titulo} lancado com sucesso. ${item.horasPagaveis}h registradas para ${item.competenciaImplantacao}.`);
   }
 
-  const isAula = preset.startsWith("HORA_AULA");
+  const isAula = preset === "HORA_AULA";
 
   return (
     <Section title="Novo lancamento">
@@ -58,12 +52,8 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
           <select className={inputClass} value={preset} onChange={(event) => changePreset(event.target.value)}>
             <option value="MG_ORDINARIO">MG Ordinario</option>
             <option value="MG_EXTRA">MG Extra</option>
-            <option value="EXTRA_B5">Extra B5</option>
-            <option value="HORA_AULA_INSTRUCAO">Hora-aula Instrucao</option>
-            <option value="HORA_AULA_CFSD">Hora-aula CFSD</option>
-            <option value="HORA_AULA_CFS">Hora-aula CFS</option>
-            <option value="HORA_AULA_CFO">Hora-aula CFO</option>
-            <option value="HORA_AULA_OUTRA">Hora-aula Outra</option>
+            <option value="EXTRA_B5">Extra Administrativo</option>
+            <option value="HORA_AULA">Hora-aula</option>
             <option value="PENDENCIA_ANTERIOR">Pendencia anterior</option>
           </select>
         </Field>
@@ -88,7 +78,13 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
             <Field label="Competencia de implantacao"><input className={inputClass} type="month" value={competenciaImplantacaoAula} onChange={(event) => setCompetenciaImplantacaoAula(event.target.value)} /></Field>
             <Field label="Inicio da aula"><input className={inputClass} type="time" value={horaInicioAula} onChange={(event) => setHoraInicioAula(event.target.value)} /></Field>
             <Field label="Fim da aula"><input className={inputClass} type="time" value={horaFimAula} onChange={(event) => setHoraFimAula(event.target.value)} /></Field>
-            <Field label="Curso"><input className={inputClass} value={curso} onChange={(event) => setCurso(event.target.value)} /></Field>
+            <Field label="Curso/tipo de aula">
+              <select className={inputClass} value={subtipoHoraAula} onChange={(event) => setSubtipoHoraAula(event.target.value as SubtipoHoraAula)}>
+                <option value="CFSD">CFSD</option>
+                <option value="CFS">CFS</option>
+                <option value="CFO">CFO</option>
+              </select>
+            </Field>
             <Field label="Disciplina"><input className={inputClass} value={disciplina} onChange={(event) => setDisciplina(event.target.value)} /></Field>
           </div>
         )}

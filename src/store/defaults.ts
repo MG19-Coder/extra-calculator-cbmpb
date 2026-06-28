@@ -36,8 +36,7 @@ export function createSampleLaunches(valores: ValoresConfig, feriados: FeriadoEs
     createHoraAula({
       inicio: "2026-06-10T00:00",
       fim: "2026-06-10T15:00",
-      categoria: "HORA_AULA_CFS",
-      curso: "CFS",
+      subtipo: "CFS",
       disciplina: "Instrucao",
       competenciaImplantacao: "2026-06",
       valores,

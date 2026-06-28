@@ -16,7 +16,6 @@ export function ValueSettings({ valores, onSave }: { valores: ValoresConfig; onS
     ["horaAulaCFSD", "Hora-aula CFSD"],
     ["horaAulaCFS", "Hora-aula CFS"],
     ["horaAulaCFO", "Hora-aula CFO"],
-    ["horaAulaOutra", "Hora-aula instrucao/outra"],
     ["limiteMensalAjudaCusto", "Cota ajuda de custo"],
     ["limiteMensalHoraAula", "Teto hora-aula"],
   ];

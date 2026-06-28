@@ -1,5 +1,6 @@
 import type { AppState, Lancamento, MonthlyTotals } from "../types";
 import { markConflicts } from "./conflictUtils";
+import { getHoraAulaSubtipo } from "./launchCompatibility";
 
 function isInCompetencia(item: Lancamento, competencia: string): boolean {
   return item.competenciaImplantacao === competencia && item.status !== "CANCELADO";
@@ -32,18 +33,18 @@ export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
   const valorNormal = Number((horasNormais * state.valores.extraNormalHora).toFixed(2));
   const valorMajorado = Number((horasMajoradas * state.valores.extraMajoradoHora).toFixed(2));
 
-  const classBy = (categorias: string[]) => classItems.filter((item) => categorias.includes(item.categoriaPagamento));
-  const sumClass = (categorias: string[]) => {
-    const items = classBy(categorias);
+  const classBy = (subtipo: "CFSD" | "CFS" | "CFO") => classItems.filter((item) => getHoraAulaSubtipo(item) === subtipo);
+  const sumClass = (subtipo: "CFSD" | "CFS" | "CFO") => {
+    const items = classBy(subtipo);
     return {
       horas: items.reduce((sum, item) => sum + item.horasAula, 0),
       valor: Number(items.reduce((sum, item) => sum + item.valorTotal, 0).toFixed(2)),
     };
   };
-  const cfsd = sumClass(["HORA_AULA_CFSD"]);
-  const cfs = sumClass(["HORA_AULA_CFS"]);
-  const cfo = sumClass(["HORA_AULA_CFO"]);
-  const outras = sumClass(["HORA_AULA_INSTRUCAO", "HORA_AULA_OUTRA"]);
+  const cfsd = sumClass("CFSD");
+  const cfs = sumClass("CFS");
+  const cfo = sumClass("CFO");
+  const outras = { horas: 0, valor: 0 };
   const horasAulaTotal = cfsd.horas + cfs.horas + cfo.horas + outras.horas;
   const classLimit = calculateClassHourLimit(horasAulaTotal, state.valores.limiteMensalHoraAula);
 

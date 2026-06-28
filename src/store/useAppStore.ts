@@ -3,6 +3,7 @@ import type { AppState, Contracheque, FeriadoEstadual, Lancamento, Militar, Valo
 import { createDefaultState } from "./defaults";
 import { markConflicts } from "../utils/conflictUtils";
 import { mergeAutomaticHolidays } from "../utils/holidayUtils";
+import { normalizeLaunch, normalizeLaunches } from "../utils/launchCompatibility";
 
 const STORAGE_KEY = "controle-extras-bm:v1";
 
@@ -16,6 +17,7 @@ function readState(): AppState {
     return {
       ...parsed,
       feriados: mergeAutomaticHolidays(parsed.feriados, [selectedYear - 1, selectedYear, selectedYear + 1]),
+      lancamentos: normalizeLaunches(parsed.lancamentos),
     };
   } catch {
     return fallback;
@@ -41,11 +43,11 @@ export function useAppStore() {
   }
 
   function addLaunches(items: Lancamento[]) {
-    setState((current) => ({ ...current, lancamentos: markConflicts([...current.lancamentos, ...items]) }));
+    setState((current) => ({ ...current, lancamentos: markConflicts([...current.lancamentos, ...normalizeLaunches(items)]) }));
   }
 
   function updateLaunch(item: Lancamento) {
-    setState((current) => ({ ...current, lancamentos: markConflicts(current.lancamentos.map((launch) => launch.id === item.id ? item : launch)) }));
+    setState((current) => ({ ...current, lancamentos: markConflicts(current.lancamentos.map((launch) => launch.id === item.id ? normalizeLaunch(item) : launch)) }));
   }
 
   function removeLaunch(id: string) {

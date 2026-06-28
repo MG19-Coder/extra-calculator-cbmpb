@@ -14,10 +14,13 @@ export type NaturezaLancamento =
   | "PENDENCIA"
   | "OUTRO";
 
+export type SubtipoHoraAula = "CFSD" | "CFS" | "CFO";
+
 export type CategoriaPagamento =
   | "NORMAL"
   | "MAJORADO"
   | "MISTO"
+  | "HORA_AULA"
   | "HORA_AULA_INSTRUCAO"
   | "HORA_AULA_CFSD"
   | "HORA_AULA_CFS"
@@ -91,6 +94,7 @@ export interface Lancamento {
   origemPendencia: string;
   possuiConflito: boolean;
   idsConflitantes: string[];
+  subtipoHoraAula?: SubtipoHoraAula;
   curso?: string;
   disciplina?: string;
 }
