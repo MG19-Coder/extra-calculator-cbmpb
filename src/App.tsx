@@ -13,7 +13,6 @@ import { People } from "./pages/People";
 import { useAppStore } from "./store/useAppStore";
 import { getMonthName } from "./utils/dateUtils";
 import { calculateMonthlyTotals } from "./utils/quotaUtils";
-import { secondaryButton } from "./components/ui";
 
 type Tab = "pessoas" | "dashboard" | "lancamentos" | "novo" | "escala" | "calendario" | "relatorio" | "contracheque" | "config" | "feriados";
 
@@ -66,7 +65,6 @@ function App() {
               {state.pessoas.map((pessoa) => <option key={pessoa.id} value={pessoa.id} className="text-ink">{pessoa.nome}</option>)}
             </select>
             <input className="min-h-11 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white" type="month" value={state.selectedMonth} onChange={(event) => store.setSelectedMonth(event.target.value)} />
-            <button className={secondaryButton} type="button" onClick={store.resetSamples}>Recarregar exemplos</button>
             <button className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-white/10 lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Abrir menu"><Menu size={20} /></button>
           </div>
         </div>

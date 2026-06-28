@@ -126,10 +126,6 @@ export function useAppStore() {
     });
   }
 
-  function resetSamples() {
-    setState(createDefaultState());
-  }
-
   return {
     state: { ...state, lancamentos: lancamentosComConflito },
     setSelectedMonth,
@@ -144,6 +140,5 @@ export function useAppStore() {
     upsertHoliday,
     removeHoliday,
     upsertPaycheck,
-    resetSamples,
   };
 }
