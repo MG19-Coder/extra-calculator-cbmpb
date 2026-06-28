@@ -11,7 +11,7 @@ export function hasTimeOverlap(a: Lancamento, b: Lancamento): boolean {
 export function markConflicts(lancamentos: Lancamento[]): Lancamento[] {
   return lancamentos.map((item) => {
     const idsConflitantes = lancamentos
-      .filter((other) => other.id !== item.id && other.status !== "CANCELADO" && hasTimeOverlap(item, other))
+      .filter((other) => other.id !== item.id && other.pessoaId === item.pessoaId && other.status !== "CANCELADO" && hasTimeOverlap(item, other))
       .map((other) => other.id);
 
     return {

@@ -119,6 +119,13 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(marked.every((item) => item.possuiConflito)).toBe(true);
   });
 
+  it("nao gera conflito entre pessoas diferentes", () => {
+    const mgCristian = createMgOrdinario("2026-06-11", valuesFor("2º SGT"), DEFAULT_FERIADOS, "MG Cristian", { pessoa: cristian });
+    const mgMaria = createMgOrdinario("2026-06-11", valuesFor("CB"), DEFAULT_FERIADOS, "MG Maria", { pessoa: maria });
+    const marked = markConflicts([mgCristian, mgMaria]);
+    expect(marked.every((item) => item.possuiConflito)).toBe(false);
+  });
+
   it("relatorio filtra por pessoa e mes", () => {
     const launchCristian = createMgExtra("2026-06-10", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Extra Cristian", { pessoa: cristian });
     const launchMaria = createMgExtra("2026-06-10", valuesFor("CB"), DEFAULT_FERIADOS, "Extra Maria", { pessoa: maria });
