@@ -27,7 +27,7 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Total pagavel" value={formatCurrency(totals.ajudaCusto.valorImplantavel + totals.horaAula.valorTotal)} tone="good" />
         <Stat label="Conflitos" value={`${totals.conflitos.length}`} tone={totals.conflitos.length ? "danger" : "good"} />
-        <Stat label="Pago no contracheque" value={formatCurrency(totals.implantado.total)} />
+        <Stat label="Horas implantadas" value={`${totals.implantadoHoras.total}h`} />
         <Stat label="Diferenca" value={formatCurrency(totals.diferenca.total)} tone={totals.diferenca.total === 0 ? "neutral" : "warn"} />
       </div>
 
@@ -69,7 +69,7 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
       <Section title="Alertas do mes">
         <div className="grid gap-3 lg:grid-cols-3">
           <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><Clock size={18} /> {totals.pendencias.length} pendencia(s) de meses anteriores.</p>
-          <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><CheckCircle2 size={18} /> Contracheque: {totals.implantado.total ? "com valores lancados" : "pendente"}.</p>
+          <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><CheckCircle2 size={18} /> Horas implantadas: {totals.implantadoHoras.total ? `${totals.implantadoHoras.total}h registradas` : "pendente"}.</p>
           <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><AlertTriangle size={18} /> {totals.conflitos.length} conflito(s) encontrados.</p>
         </div>
       </Section>

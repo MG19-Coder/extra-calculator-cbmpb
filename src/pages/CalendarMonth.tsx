@@ -63,6 +63,48 @@ function suggestionLabel(suggestion: FreeTimeSuggestion): string {
   return `${formatDateTime(suggestion.inicio)} ate ${formatDateTime(suggestion.fim)} - ${label}`;
 }
 
+type SuggestionGroup = {
+  date: string;
+  suggestions: FreeTimeSuggestion[];
+  totalHours: number;
+  normalHours: number;
+  majorHours: number;
+  category: "NORMAL" | "MAJORADO" | "MISTO";
+};
+
+function groupSuggestionsByDay(suggestions: FreeTimeSuggestion[]): SuggestionGroup[] {
+  const byDate = new Map<string, SuggestionGroup>();
+  for (const suggestion of suggestions) {
+    const date = suggestion.inicio.slice(0, 10);
+    const group = byDate.get(date) ?? {
+      date,
+      suggestions: [],
+      totalHours: 0,
+      normalHours: 0,
+      majorHours: 0,
+      category: "NORMAL" as const,
+    };
+    group.suggestions.push(suggestion);
+    group.totalHours += suggestion.horas;
+    group.normalHours += suggestion.horasNormais;
+    group.majorHours += suggestion.horasMajoradas;
+    group.category = group.normalHours > 0 && group.majorHours > 0 ? "MISTO" : group.majorHours > 0 ? "MAJORADO" : "NORMAL";
+    byDate.set(date, group);
+  }
+  return Array.from(byDate.values()).map((group) => ({
+    ...group,
+    totalHours: Number(group.totalHours.toFixed(2)),
+    normalHours: Number(group.normalHours.toFixed(2)),
+    majorHours: Number(group.majorHours.toFixed(2)),
+  }));
+}
+
+function categoryText(category: "NORMAL" | "MAJORADO" | "MISTO", normalHours = 0, majorHours = 0): string {
+  if (category === "NORMAL") return "normal";
+  if (category === "MAJORADO") return "majorado";
+  return `misto (${normalHours}h normais + ${majorHours}h majoradas)`;
+}
+
 function summaryTitle(summary: ConflictSummary): string {
   const left = summary.tipoLancamento === "HORA_AULA" ? "Hora-aula" : getItemLabel({ tipo: summary.tipoLancamento } as Lancamento);
   const right = summary.tipoConflitante === "HORA_AULA" ? "Hora-aula" : getItemLabel({ tipo: summary.tipoConflitante } as Lancamento);
@@ -148,6 +190,10 @@ export function CalendarMonth({
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
   const [freeSuggestions, setFreeSuggestions] = useState<FreeTimeSuggestion[]>([]);
   const [freeMessage, setFreeMessage] = useState("Clique em calcular para localizar horarios disponiveis.");
+  const [desiredNormalHours, setDesiredNormalHours] = useState(0);
+  const [desiredMajorHours, setDesiredMajorHours] = useState(0);
+  const [desiredClassHours, setDesiredClassHours] = useState(0);
+  const [desiredClassType, setDesiredClassType] = useState<SubtipoHoraAula>("CFS");
   const editRef = useRef<HTMLDivElement | null>(null);
   const editDateRef = useRef<HTMLInputElement | null>(null);
 
@@ -192,16 +238,24 @@ export function CalendarMonth({
     const [year, month] = competencia.split("-").map(Number);
     const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const end = new Date(year, month + 1, 0, 23, 59, 0, 0);
-    const neededHours = Math.max(5, Math.min(12, conflictSummaries.reduce((sum, item) => sum + item.horasConflito, 0) || 12));
-    const suggestions = suggestFreeTimeWindows({
+    const requested = Math.max(desiredNormalHours, desiredMajorHours, desiredClassHours, conflictSummaries.reduce((sum, item) => sum + item.horasConflito, 0), 12);
+    const rawSuggestions = suggestFreeTimeWindows({
       dataInicial: toDateTimeInput(start),
       dataFinal: toDateTimeInput(end),
-      quantidadeHorasNecessarias: neededHours,
+      quantidadeHorasNecessarias: Math.min(12, requested),
       agendaExistente: calendarItems,
       feriados,
       pessoaId: activePessoaId,
-      limite: 8,
+      limite: 18,
     });
+    const hasSpecificRequest = desiredNormalHours > 0 || desiredMajorHours > 0 || desiredClassHours > 0;
+    const suggestions = hasSpecificRequest
+      ? rawSuggestions.filter((item) => (
+          (desiredNormalHours > 0 && item.horasNormais > 0) ||
+          (desiredMajorHours > 0 && item.horasMajoradas > 0) ||
+          desiredClassHours > 0
+        ))
+      : rawSuggestions;
     setFreeSuggestions(suggestions);
     setFreeMessage(suggestions.length ? `${suggestions.length} horario(s) livre(s) encontrado(s).` : "Nenhum horario livre encontrado no mes atual ou seguinte.");
   }
@@ -325,8 +379,15 @@ export function CalendarMonth({
                       <p className="mt-1 text-red-800">Nenhum horario livre encontrado no mes atual ou seguinte.</p>
                     ) : (
                       <ul className="mt-1 grid gap-1 text-red-900">
-                        {summary.sugestoes.map((suggestion) => (
-                          <li key={`${summary.id}-${suggestion.inicio}`}>- {suggestionLabel(suggestion)}</li>
+                        {groupSuggestionsByDay(summary.sugestoes).map((group) => (
+                          <li key={`${summary.id}-${group.date}`}>
+                            <span className="font-semibold">{formatDate(group.date)}:</span> {group.totalHours}h livres - {categoryText(group.category, group.normalHours, group.majorHours)}
+                            <ul className="ml-3 mt-1 grid gap-1">
+                              {group.suggestions.map((suggestion) => (
+                                <li key={`${summary.id}-${suggestion.inicio}`}>- {suggestion.inicio.slice(11, 16)} as {suggestion.fim.slice(11, 16)} - {suggestion.horas}h</li>
+                              ))}
+                            </ul>
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -338,22 +399,44 @@ export function CalendarMonth({
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-wide text-ink">Horarios livres para implantacao</p>
               <p className="mt-1 text-sm text-slate-600">{freeMessage}</p>
             </div>
             <button className={`${primaryButton} w-full sm:w-auto`} type="button" onClick={calculateFreeTimes}>Calcular horarios livres</button>
           </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <Field label="Horas normais que desejo implantar">
+              <input className={inputClass} type="number" min="0" step="0.5" value={desiredNormalHours} onChange={(event) => setDesiredNormalHours(Number(event.target.value))} />
+            </Field>
+            <Field label="Horas majoradas que desejo implantar">
+              <input className={inputClass} type="number" min="0" step="0.5" value={desiredMajorHours} onChange={(event) => setDesiredMajorHours(Number(event.target.value))} />
+            </Field>
+            <Field label="Horas de magisterio">
+              <input className={inputClass} type="number" min="0" step="0.5" value={desiredClassHours} onChange={(event) => setDesiredClassHours(Number(event.target.value))} />
+            </Field>
+            <Field label="Tipo de magisterio">
+              <select className={inputClass} value={desiredClassType} onChange={(event) => setDesiredClassType(event.target.value as SubtipoHoraAula)}>
+                <option value="CFSD">CFSD</option>
+                <option value="CFS">CFS</option>
+                <option value="CFO">CFO</option>
+              </select>
+            </Field>
+          </div>
           {freeSuggestions.length > 0 && (
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {freeSuggestions.map((suggestion) => (
-                <article key={`${suggestion.inicio}-${suggestion.fim}`} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
-                  <p className="font-semibold">Horario livre</p>
-                  <p className="mt-1">{formatDate(suggestion.inicio.slice(0, 10))}</p>
-                  <p>{suggestion.inicio.slice(11, 16)} as {suggestion.fim.slice(11, 16)}</p>
-                  <p>{suggestion.horas}h disponiveis</p>
-                  <p>Tipo: {suggestion.categoria === "NORMAL" ? "normal" : suggestion.categoria === "MAJORADO" ? "majorado" : `misto (${suggestion.horasNormais}h normais + ${suggestion.horasMajoradas}h majoradas)`}</p>
+              {groupSuggestionsByDay(freeSuggestions).map((group) => (
+                <article key={group.date} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+                  <p className="font-semibold">{formatDate(group.date)} - {getWeekdayLabel(group.date)}</p>
+                  <p className="mt-1">{group.totalHours}h disponiveis</p>
+                  <div className="mt-2 grid gap-1">
+                    {group.suggestions.map((suggestion) => (
+                      <p key={`${suggestion.inicio}-${suggestion.fim}`}>- {suggestion.inicio.slice(11, 16)} as {suggestion.fim.slice(11, 16)} - {suggestion.horas}h</p>
+                    ))}
+                  </div>
+                  <p className="mt-2">Tipo: {categoryText(group.category, group.normalHours, group.majorHours)}</p>
+                  {desiredClassHours > 0 && <p>Magisterio: {desiredClassType}</p>}
                 </article>
               ))}
             </div>

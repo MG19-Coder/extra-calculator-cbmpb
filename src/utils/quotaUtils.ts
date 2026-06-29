@@ -97,8 +97,15 @@ export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
   const classLimit = calculateClassHourLimit(horasAulaTotal, state.valores.limiteMensalHoraAula);
 
   const paycheck = state.contracheques.find((item) => item.competencia === state.selectedMonth);
+  const horasNormaisImplantadas = paycheck?.horasNormaisImplantadas ?? 0;
+  const horasMajoradasImplantadas = paycheck?.horasMajoradasImplantadas ?? 0;
+  const horasAjudaImplantadas = horasNormaisImplantadas + horasMajoradasImplantadas;
+  const horasCfsdImplantadas = paycheck?.magisterioCFSD ?? 0;
+  const horasCfsImplantadas = paycheck?.magisterioCFS ?? 0;
+  const horasCfoImplantadas = paycheck?.magisterioCFO ?? 0;
+  const horasAulaImplantadas = horasCfsdImplantadas + horasCfsImplantadas + horasCfoImplantadas;
   const implantadoAjuda = paycheck?.ajudaCustoOperacional ?? 0;
-  const implantadoAula = (paycheck?.magisterioCFSD ?? 0) + (paycheck?.magisterioCFS ?? 0) + (paycheck?.magisterioCFO ?? 0) + (paycheck?.outrosValores ?? 0);
+  const implantadoAula = paycheck?.outrosValores ?? 0;
   const valorAjuda = Number((valorNormal + valorMajorado).toFixed(2));
   const valorAjudaImplantavel = payableHelpCost.valorImplantavel;
   const valorAula = Number((cfsd.valor + cfs.valor + cfo.valor + outras.valor).toFixed(2));
@@ -138,6 +145,25 @@ export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
       ajudaCusto: implantadoAjuda,
       horaAula: implantadoAula,
       total: Number((implantadoAjuda + implantadoAula).toFixed(2)),
+    },
+    implantadoHoras: {
+      normais: horasNormaisImplantadas,
+      majoradas: horasMajoradasImplantadas,
+      ajudaCusto: horasAjudaImplantadas,
+      cfsd: horasCfsdImplantadas,
+      cfs: horasCfsImplantadas,
+      cfo: horasCfoImplantadas,
+      horaAula: horasAulaImplantadas,
+      total: horasAjudaImplantadas + horasAulaImplantadas,
+    },
+    pendenteHoras: {
+      normais: Math.max(0, payableHelpCost.horasNormaisImplantaveis - horasNormaisImplantadas),
+      majoradas: Math.max(0, payableHelpCost.horasMajoradasImplantaveis - horasMajoradasImplantadas),
+      ajudaCusto: Math.max(0, quota.horasImplantaveis - horasAjudaImplantadas),
+      cfsd: Math.max(0, cfsd.horas - horasCfsdImplantadas),
+      cfs: Math.max(0, cfs.horas - horasCfsImplantadas),
+      cfo: Math.max(0, cfo.horas - horasCfoImplantadas),
+      horaAula: Math.max(0, horasAulaTotal - horasAulaImplantadas),
     },
     diferenca: {
       ajudaCusto: Number((valorAjudaImplantavel - implantadoAjuda).toFixed(2)),

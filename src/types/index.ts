@@ -136,6 +136,8 @@ export interface Lancamento {
 export interface Contracheque {
   competencia: string;
   ajudaCustoOperacional: number;
+  horasNormaisImplantadas?: number;
+  horasMajoradasImplantadas?: number;
   magisterioCFSD: number;
   magisterioCFS: number;
   magisterioCFO: number;
@@ -219,6 +221,25 @@ export interface MonthlyTotals {
     ajudaCusto: number;
     horaAula: number;
     total: number;
+  };
+  implantadoHoras: {
+    normais: number;
+    majoradas: number;
+    ajudaCusto: number;
+    cfsd: number;
+    cfs: number;
+    cfo: number;
+    horaAula: number;
+    total: number;
+  };
+  pendenteHoras: {
+    normais: number;
+    majoradas: number;
+    ajudaCusto: number;
+    cfsd: number;
+    cfs: number;
+    cfo: number;
+    horaAula: number;
   };
   diferenca: {
     ajudaCusto: number;

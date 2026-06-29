@@ -24,7 +24,7 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
   { id: "escala", label: "Escala 24x48", icon: Sparkles },
   { id: "calendario", label: "Calendario", icon: CalendarDays },
   { id: "relatorio", label: "WhatsApp", icon: FileText },
-  { id: "contracheque", label: "Contracheque", icon: ClipboardCheck },
+  { id: "contracheque", label: "Horas implantadas", icon: ClipboardCheck },
   { id: "config", label: "Configuracoes", icon: Settings },
   { id: "feriados", label: "Feriados", icon: CalendarDays },
 ];
