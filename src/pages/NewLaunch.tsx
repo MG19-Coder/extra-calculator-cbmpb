@@ -1,5 +1,5 @@
 import { CheckCircle2, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppState, Lancamento, SubtipoHoraAula } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
@@ -23,10 +23,27 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
   const [origemMes, setOrigemMes] = useState("05");
   const [origemAno, setOrigemAno] = useState("2026");
   const [notice, setNotice] = useState("");
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const serviceDateRef = useRef<HTMLInputElement | null>(null);
+  const aulaDateRef = useRef<HTMLInputElement | null>(null);
+  const pendenciaMesRef = useRef<HTMLInputElement | null>(null);
 
   function changePreset(value: string) {
     setPreset(value);
   }
+
+  useEffect(() => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (preset === "HORA_AULA") {
+        aulaDateRef.current?.focus({ preventScroll: true });
+      } else if (preset === "PENDENCIA_ANTERIOR") {
+        pendenciaMesRef.current?.focus({ preventScroll: true });
+      } else {
+        serviceDateRef.current?.focus({ preventScroll: true });
+      }
+    }, 50);
+  }, [preset]);
 
   function submit() {
     let item: Lancamento;
@@ -51,7 +68,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
 
   return (
     <Section title="Novo lancamento">
-      <div className="grid gap-4">
+      <div ref={formRef} className="grid gap-4 pb-6">
         <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
           Pessoa ativa: <strong>{pessoa.nome}</strong> - {pessoa.graduacao}
         </p>
@@ -67,13 +84,13 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
 
         {!isAula && preset !== "PENDENCIA_ANTERIOR" && (
           <Field label="Data da prontidao/servico">
-            <input className={inputClass} type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} />
+            <input ref={serviceDateRef} className={inputClass} type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} />
           </Field>
         )}
 
         {isAula && (
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Dia da aula"><input className={inputClass} type="date" value={aulaDate} onChange={(event) => setAulaDate(event.target.value)} /></Field>
+            <Field label="Dia da aula"><input ref={aulaDateRef} className={inputClass} type="date" value={aulaDate} onChange={(event) => setAulaDate(event.target.value)} /></Field>
             <Field label="Competencia de implantacao"><input className={inputClass} type="month" value={competenciaImplantacaoAula} onChange={(event) => setCompetenciaImplantacaoAula(event.target.value)} /></Field>
             <Field label="Inicio da aula"><input className={inputClass} type="time" value={horaInicioAula} onChange={(event) => setHoraInicioAula(event.target.value)} /></Field>
             <Field label="Fim da aula"><input className={inputClass} type="time" value={horaFimAula} onChange={(event) => setHoraFimAula(event.target.value)} /></Field>
@@ -90,7 +107,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
 
         {preset === "PENDENCIA_ANTERIOR" && (
           <div className="grid gap-3 sm:grid-cols-4">
-            <Field label="Mes origem"><input className={inputClass} value={origemMes} onChange={(event) => setOrigemMes(event.target.value.padStart(2, "0").slice(-2))} /></Field>
+            <Field label="Mes origem"><input ref={pendenciaMesRef} className={inputClass} value={origemMes} onChange={(event) => setOrigemMes(event.target.value.padStart(2, "0").slice(-2))} /></Field>
             <Field label="Ano origem"><input className={inputClass} value={origemAno} onChange={(event) => setOrigemAno(event.target.value)} /></Field>
             <Field label="Horas"><input className={inputClass} type="number" value={horasPagaveis} onChange={(event) => setHorasPagaveis(Number(event.target.value))} /></Field>
             <Field label="Tipo">

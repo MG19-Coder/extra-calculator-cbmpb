@@ -25,9 +25,9 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Total previsto" value={formatCurrency(totals.ajudaCusto.valorTotal + totals.horaAula.valorTotal)} tone="good" />
+        <Stat label="Total pagavel" value={formatCurrency(totals.ajudaCusto.valorImplantavel + totals.horaAula.valorTotal)} tone="good" />
         <Stat label="Conflitos" value={`${totals.conflitos.length}`} tone={totals.conflitos.length ? "danger" : "good"} />
-        <Stat label="Implantado" value={formatCurrency(totals.implantado.total)} />
+        <Stat label="Pago no contracheque" value={formatCurrency(totals.implantado.total)} />
         <Stat label="Diferenca" value={formatCurrency(totals.diferenca.total)} tone={totals.diferenca.total === 0 ? "neutral" : "warn"} />
       </div>
 
@@ -42,11 +42,13 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
             <Stat label="Excedentes" value={`${totals.ajudaCusto.horasExcedentes}h`} tone={totals.ajudaCusto.horasExcedentes ? "warn" : "neutral"} />
           </div>
           <div className="mt-4 rounded-lg border border-slate-200 bg-white px-3">
-            <ValueLine label="Extra normal" hours={totals.ajudaCusto.horasNormais} value={totals.ajudaCusto.valorNormal} tone="normal" />
-            <ValueLine label="Extra majorado/especial" hours={totals.ajudaCusto.horasMajoradas} value={totals.ajudaCusto.valorMajorado} tone="majorado" />
-            <ValueLine label="Soma dos extras" hours={totals.ajudaCusto.horasTotal} value={totals.ajudaCusto.valorTotal} tone="total" />
+            <ValueLine label="Extra normal pagavel" hours={totals.ajudaCusto.horasNormaisImplantaveis} value={totals.ajudaCusto.valorNormalImplantavel} tone="normal" />
+            <ValueLine label="Extra majorado pagavel" hours={totals.ajudaCusto.horasMajoradasImplantaveis} value={totals.ajudaCusto.valorMajoradoImplantavel} tone="majorado" />
+            <ValueLine label="Soma pagavel ate 288h" hours={totals.ajudaCusto.horasImplantaveis} value={totals.ajudaCusto.valorImplantavel} tone="total" />
+            <ValueLine label="Total lancado no mes" hours={totals.ajudaCusto.horasTotal} value={totals.ajudaCusto.valorTotal} tone="normal" />
+            <ValueLine label="Excedente fora da cota" hours={totals.ajudaCusto.horasExcedentes} value={totals.ajudaCusto.valorExcedente} tone="majorado" />
           </div>
-          <p className="mt-4 flex items-center gap-2 text-lg font-semibold text-ink"><DollarSign size={20} /> Total ajuda de custo: {formatCurrency(totals.ajudaCusto.valorTotal)}</p>
+          <p className="mt-4 flex items-center gap-2 text-lg font-semibold text-ink"><DollarSign size={20} /> Total pagavel ajuda de custo: {formatCurrency(totals.ajudaCusto.valorImplantavel)}</p>
         </Section>
 
         <Section title="Hora-aula">

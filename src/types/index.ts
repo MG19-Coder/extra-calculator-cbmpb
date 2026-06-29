@@ -125,6 +125,7 @@ export interface Lancamento {
   origemPendencia: string;
   possuiConflito: boolean;
   idsConflitantes: string[];
+  detalhesConflito?: ConflictDetail[];
   subtipoHoraAula?: SubtipoHoraAula;
   curso?: string;
   disciplina?: string;
@@ -151,6 +152,38 @@ export interface PaymentBlock {
   motivo: string;
 }
 
+export interface ClassifiedHours {
+  horasNormais: number;
+  horasMajoradas: number;
+  categoria: "NORMAL" | "MAJORADO" | "MISTO";
+}
+
+export interface FreeTimeSuggestion {
+  inicio: string;
+  fim: string;
+  horas: number;
+  horasNormais: number;
+  horasMajoradas: number;
+  categoria: "NORMAL" | "MAJORADO" | "MISTO";
+}
+
+export interface ConflictDetail {
+  idConflitante: string;
+  tituloConflitante: string;
+  tipoConflitante: TipoLancamento;
+  inicioConflito: string;
+  fimConflito: string;
+  horasConflito: number;
+  sugestoes: FreeTimeSuggestion[];
+}
+
+export interface ConflictSummary extends ConflictDetail {
+  id: string;
+  lancamentoId: string;
+  tituloLancamento: string;
+  tipoLancamento: TipoLancamento;
+}
+
 export interface MonthlyTotals {
   competencia: string;
   ajudaCusto: {
@@ -162,6 +195,12 @@ export interface MonthlyTotals {
     valorNormal: number;
     valorMajorado: number;
     valorTotal: number;
+    valorImplantavel: number;
+    valorExcedente: number;
+    valorNormalImplantavel: number;
+    valorMajoradoImplantavel: number;
+    horasNormaisImplantaveis: number;
+    horasMajoradasImplantaveis: number;
   };
   horaAula: {
     cfsd: { horas: number; valor: number };
@@ -174,6 +213,7 @@ export interface MonthlyTotals {
     excedeuTeto: boolean;
   };
   conflitos: Lancamento[];
+  conflitosDetalhados: ConflictSummary[];
   pendencias: Lancamento[];
   implantado: {
     ajudaCusto: number;

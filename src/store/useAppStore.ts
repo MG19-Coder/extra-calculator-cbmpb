@@ -5,6 +5,7 @@ import { markConflicts } from "../utils/conflictUtils";
 import { mergeAutomaticHolidays } from "../utils/holidayUtils";
 import { normalizeLaunch, normalizeLaunches } from "../utils/launchCompatibility";
 import { DEFAULT_PAY_TABLES } from "../data/payTables";
+import { mergeImportedState, replaceWithImportedState } from "../utils/dataTransferUtils";
 
 const STORAGE_KEY = "controle-extras-bm:v1";
 
@@ -37,7 +38,7 @@ export function useAppStore() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const lancamentosComConflito = useMemo(() => markConflicts(state.lancamentos), [state.lancamentos]);
+  const lancamentosComConflito = useMemo(() => markConflicts(state.lancamentos, state.feriados), [state.lancamentos, state.feriados]);
 
   function setSelectedMonth(selectedMonth: string) {
     const selectedYear = Number(selectedMonth.slice(0, 4));
@@ -80,16 +81,16 @@ export function useAppStore() {
 
   function addLaunches(items: Lancamento[]) {
     const fallbackPessoa = state.pessoas.find((item) => item.id === state.activePessoaId) ?? state.pessoas[0];
-    setState((current) => ({ ...current, lancamentos: markConflicts([...current.lancamentos, ...normalizeLaunches(items, fallbackPessoa)]) }));
+    setState((current) => ({ ...current, lancamentos: markConflicts([...current.lancamentos, ...normalizeLaunches(items, fallbackPessoa)], current.feriados) }));
   }
 
   function updateLaunch(item: Lancamento) {
     const fallbackPessoa = state.pessoas.find((person) => person.id === state.activePessoaId) ?? state.pessoas[0];
-    setState((current) => ({ ...current, lancamentos: markConflicts(current.lancamentos.map((launch) => launch.id === item.id ? normalizeLaunch(item, fallbackPessoa) : launch)) }));
+    setState((current) => ({ ...current, lancamentos: markConflicts(current.lancamentos.map((launch) => launch.id === item.id ? normalizeLaunch(item, fallbackPessoa) : launch), current.feriados) }));
   }
 
   function removeLaunch(id: string) {
-    setState((current) => ({ ...current, lancamentos: markConflicts(current.lancamentos.filter((item) => item.id !== id)) }));
+    setState((current) => ({ ...current, lancamentos: markConflicts(current.lancamentos.filter((item) => item.id !== id), current.feriados) }));
   }
 
   function updateValues(valores: ValoresConfig) {
@@ -126,6 +127,22 @@ export function useAppStore() {
     });
   }
 
+  function importScale(imported: AppState, mode: "replace" | "merge") {
+    let result = { importedLaunches: 0, skippedDuplicates: 0 };
+    setState((current) => {
+      const importedResult = mode === "replace" ? replaceWithImportedState(imported) : mergeImportedState(current, imported);
+      result = {
+        importedLaunches: importedResult.importedLaunches,
+        skippedDuplicates: importedResult.skippedDuplicates,
+      };
+      return {
+        ...importedResult.state,
+        lancamentos: markConflicts(importedResult.state.lancamentos, importedResult.state.feriados),
+      };
+    });
+    return result;
+  }
+
   return {
     state: { ...state, lancamentos: lancamentosComConflito },
     setSelectedMonth,
@@ -140,5 +157,6 @@ export function useAppStore() {
     upsertHoliday,
     removeHoliday,
     upsertPaycheck,
+    importScale,
   };
 }

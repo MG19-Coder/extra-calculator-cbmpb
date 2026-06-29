@@ -36,7 +36,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   );
 }
 
-export const inputClass = "min-h-11 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-ink shadow-sm";
+export const inputClass = "min-h-11 rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-ink shadow-sm sm:text-sm";
 
 export const primaryButton = "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-rescue px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800";
 export const secondaryButton = "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50";

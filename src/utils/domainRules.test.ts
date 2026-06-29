@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { AppState, Pessoa } from "../types";
 import { DEFAULT_PAY_TABLES } from "../data/payTables";
 import { DEFAULT_FERIADOS, DEFAULT_MILITAR, DEFAULT_VALUES } from "../store/defaults";
-import { markConflicts } from "./conflictUtils";
+import { markConflicts, suggestFreeTimeWindows } from "./conflictUtils";
+import { createExportPayload, mergeImportedState, parseImportedScale } from "./dataTransferUtils";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from "./launchFactory";
 import { payTableToValues } from "./payTableUtils";
 import { calculateMonthlyTotals } from "./quotaUtils";
@@ -90,6 +91,16 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(launch.horasPagaveis).toBe(24);
   });
 
+  it("mantem sexta, sabado, domingo e feriado como majorado", () => {
+    const feriado = createMgExtra("2026-06-04", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Corpus Christi", { pessoa: cristian });
+    const sexta = createMgOrdinario("2026-06-06", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Sexta", { pessoa: cristian });
+    const segunda = createMgOrdinario("2026-06-09", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Segunda", { pessoa: cristian });
+
+    expect(feriado.horasMajoradas).toBeGreaterThan(0);
+    expect(sexta.horasMajoradas).toBe(12);
+    expect(segunda.horasNormais).toBe(12);
+  });
+
   it("Extra Administrativo gera 24h pagaveis automaticamente", () => {
     const launch = createExtraB5({ serviceDate: "2026-06-10", valores: valuesFor("2º SGT"), feriados: DEFAULT_FERIADOS, pessoa: cristian });
     expect(launch.tipo).toBe("EXTRA_ADMINISTRATIVO");
@@ -97,11 +108,40 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(launch.horasPagaveis).toBe(24);
   });
 
+  it("limita o valor pagavel de ajuda de custo a 288h", () => {
+    const valores = valuesFor("2º SGT");
+    const launch = createExtraB5({
+      serviceDate: "2026-06-10",
+      valores,
+      feriados: DEFAULT_FERIADOS,
+      pessoa: cristian,
+      horasNormais: 300,
+      horasPagaveis: 300,
+    });
+    const totals = calculateMonthlyTotals(stateOf({ lancamentos: [launch] }));
+
+    expect(totals.ajudaCusto.horasTotal).toBe(300);
+    expect(totals.ajudaCusto.horasImplantaveis).toBe(288);
+    expect(totals.ajudaCusto.valorImplantavel).toBe(Number((288 * valores.extraNormalHora).toFixed(2)));
+    expect(totals.ajudaCusto.valorExcedente).toBe(Number((12 * valores.extraNormalHora).toFixed(2)));
+  });
+
   it("hora-aula fica fora da cota de 288h", () => {
     const aula = createHoraAula({ inicio: "2026-06-10T00:00", fim: "2026-06-10T15:00", subtipo: "CFS", disciplina: "Instrucao", valores: valuesFor("2º SGT"), pessoa: cristian });
     const totals = calculateMonthlyTotals(stateOf({ lancamentos: [aula] }));
     expect(totals.ajudaCusto.horasTotal).toBe(0);
     expect(totals.horaAula.horasTotal).toBe(15);
+  });
+
+  it("hora-aula usa valores fixos por curso", () => {
+    const valores = valuesFor("SD");
+    const cfsd = createHoraAula({ inicio: "2026-06-10T08:00", fim: "2026-06-10T09:00", subtipo: "CFSD", disciplina: "Instrucao", valores, pessoa: cristian });
+    const cfs = createHoraAula({ inicio: "2026-06-10T09:00", fim: "2026-06-10T10:00", subtipo: "CFS", disciplina: "Instrucao", valores, pessoa: cristian });
+    const cfo = createHoraAula({ inicio: "2026-06-10T10:00", fim: "2026-06-10T11:00", subtipo: "CFO", disciplina: "Instrucao", valores, pessoa: cristian });
+
+    expect(cfsd.valorHoraAulaUsado).toBe(43.41);
+    expect(cfs.valorHoraAulaUsado).toBe(86.82);
+    expect(cfo.valorHoraAulaUsado).toBe(130.24);
   });
 
   it("hora-aula respeita teto mensal de 40h", () => {
@@ -115,14 +155,50 @@ describe("regras de servico, cotas e conflitos", () => {
   it("conflitos usam horas reais", () => {
     const mg = createMgOrdinario("2026-06-11", valuesFor("2º SGT"), DEFAULT_FERIADOS, "MG", { pessoa: cristian });
     const aula = createHoraAula({ inicio: "2026-06-11T08:00", fim: "2026-06-11T12:00", subtipo: "CFS", disciplina: "Instrucao", valores: valuesFor("2º SGT"), pessoa: cristian });
-    const marked = markConflicts([mg, aula]);
+    const marked = markConflicts([mg, aula], DEFAULT_FERIADOS);
     expect(marked.every((item) => item.possuiConflito)).toBe(true);
+  });
+
+  it("calcula periodo conflitante e sugestoes livres", () => {
+    const aula = createHoraAula({ inicio: "2026-06-27T08:00", fim: "2026-06-27T23:00", subtipo: "CFS", disciplina: "Instrucao", valores: valuesFor("2º SGT"), pessoa: cristian });
+    const extra = createExtraB5({
+      serviceDate: "2026-06-28",
+      valores: valuesFor("2º SGT"),
+      feriados: DEFAULT_FERIADOS,
+      pessoa: cristian,
+      inicio: "2026-06-27T18:00",
+      fim: "2026-06-28T06:00",
+      horasMajoradas: 12,
+      horasPagaveis: 12,
+    });
+    const marked = markConflicts([aula, extra], DEFAULT_FERIADOS);
+    const detail = marked[0].detalhesConflito?.[0];
+
+    expect(detail?.inicioConflito).toBe("2026-06-27T18:00");
+    expect(detail?.fimConflito).toBe("2026-06-27T23:00");
+    expect(detail?.horasConflito).toBe(5);
+    expect(detail?.sugestoes.length).toBeGreaterThan(0);
+  });
+
+  it("sugere janela livre sem sobrepor agenda existente", () => {
+    const ocupada = createHoraAula({ inicio: "2026-06-30T08:00", fim: "2026-06-30T13:00", subtipo: "CFS", disciplina: "Instrucao", valores: valuesFor("2º SGT"), pessoa: cristian });
+    const sugestoes = suggestFreeTimeWindows({
+      dataInicial: "2026-06-30T00:00",
+      dataFinal: "2026-07-31T23:59",
+      quantidadeHorasNecessarias: 5,
+      agendaExistente: [ocupada],
+      feriados: DEFAULT_FERIADOS,
+      pessoaId: cristian.id,
+    });
+
+    expect(sugestoes.some((item) => item.inicio === "2026-06-30T08:00")).toBe(false);
+    expect(sugestoes[0].horas).toBeGreaterThan(0);
   });
 
   it("nao gera conflito entre pessoas diferentes", () => {
     const mgCristian = createMgOrdinario("2026-06-11", valuesFor("2º SGT"), DEFAULT_FERIADOS, "MG Cristian", { pessoa: cristian });
     const mgMaria = createMgOrdinario("2026-06-11", valuesFor("CB"), DEFAULT_FERIADOS, "MG Maria", { pessoa: maria });
-    const marked = markConflicts([mgCristian, mgMaria]);
+    const marked = markConflicts([mgCristian, mgMaria], DEFAULT_FERIADOS);
     expect(marked.every((item) => item.possuiConflito)).toBe(false);
   });
 
@@ -136,5 +212,30 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(report).toContain("Militar: Cristian");
     expect(report).toContain("Graduacao: 2º SGT");
     expect(totals.ajudaCusto.horasTotal).toBe(24);
+  });
+});
+
+describe("exportacao e importacao de escala", () => {
+  it("exporta e restaura a escala completa em JSON", () => {
+    const launch = createMgExtra("2026-06-10", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Extra", { pessoa: cristian });
+    const state = stateOf({ lancamentos: [launch] });
+    const payload = createExportPayload(state);
+    const imported = parseImportedScale(JSON.stringify(payload));
+
+    expect(payload.versao).toBe("1.0");
+    expect(imported.lancamentos).toHaveLength(1);
+    expect(imported.lancamentos[0].tipo).toBe("MG_EXTRA");
+    expect(imported.pessoas[0].nome).toBe("Cristian");
+  });
+
+  it("mescla escala ignorando lancamentos duplicados", () => {
+    const launch = createMgExtra("2026-06-10", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Extra", { pessoa: cristian });
+    const current = stateOf({ lancamentos: [launch] });
+    const imported = stateOf({ lancamentos: [{ ...launch, id: "outro-id" }] });
+    const result = mergeImportedState(current, imported);
+
+    expect(result.importedLaunches).toBe(0);
+    expect(result.skippedDuplicates).toBe(1);
+    expect(result.state.lancamentos).toHaveLength(1);
   });
 });

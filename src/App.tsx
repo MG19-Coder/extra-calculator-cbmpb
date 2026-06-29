@@ -7,7 +7,7 @@ import { ScaleGenerator } from "./pages/ScaleGenerator";
 import { CalendarMonth } from "./pages/CalendarMonth";
 import { Report } from "./pages/Report";
 import { Paycheck } from "./pages/Paycheck";
-import { SettingsPage } from "./pages/Settings";
+import { DataManagement, SettingsPage } from "./pages/Settings";
 import { Holidays } from "./pages/Holidays";
 import { People } from "./pages/People";
 import { useAppStore } from "./store/useAppStore";
@@ -47,7 +47,7 @@ function App() {
     calendario: <CalendarMonth competencia={state.selectedMonth} items={state.lancamentos} feriados={state.feriados} valores={state.valores} activePessoaId={state.activePessoaId} onUpdate={store.updateLaunch} />,
     relatorio: <Report state={state} totals={totals} />,
     contracheque: <Paycheck state={state} totals={totals} onSave={store.upsertPaycheck} />,
-    config: <SettingsPage state={state} onValues={store.updateValues} />,
+    config: <SettingsPage state={state} onValues={store.updateValues} onImport={store.importScale} showDataManagement={false} />,
     feriados: <Holidays feriados={state.feriados} onSave={store.upsertHoliday} onRemove={store.removeHoliday} />,
   }[tab];
 
@@ -69,6 +69,10 @@ function App() {
           </div>
         </div>
       </header>
+
+      <div className="mx-auto max-w-7xl px-4 pt-4">
+        <DataManagement state={state} onImport={store.importScale} />
+      </div>
 
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[240px_1fr]">
         <nav className={`${menuOpen ? "grid" : "hidden"} gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-soft lg:grid lg:self-start`}>

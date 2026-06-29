@@ -35,7 +35,16 @@ export function LaunchList({ items, onRemove }: { items: Lancamento[]; onRemove:
               <span>Aula: <strong>{item.horasAula}h</strong></span>
               <span>Valor: <strong>{formatCurrency(item.valorTotal)}</strong></span>
             </div>
-            {item.possuiConflito && <p className="mt-2 text-sm font-medium text-red-800">Conflito com {item.idsConflitantes.length} lancamento(s).</p>}
+            {item.possuiConflito && (
+              <div className="mt-2 rounded-md bg-red-100 p-2 text-sm text-red-900">
+                <p className="font-semibold">Conflito com {item.idsConflitantes.length} lancamento(s).</p>
+                {(item.detalhesConflito ?? []).map((detail) => (
+                  <p key={`${item.id}-${detail.idConflitante}-${detail.inicioConflito}`} className="mt-1">
+                    {detail.tituloConflitante}: {formatDateTime(detail.inicioConflito)} ate {formatDateTime(detail.fimConflito)} ({detail.horasConflito}h)
+                  </p>
+                ))}
+              </div>
+            )}
           </article>
         ))}
       </div>

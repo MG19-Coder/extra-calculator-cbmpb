@@ -1,5 +1,11 @@
 import type { PayTable, Pessoa, SubtipoHoraAula, ValoresConfig } from "../types";
 
+export const FIXED_CLASS_VALUES = {
+  CFSD: 43.41,
+  CFS: 86.82,
+  CFO: 130.24,
+} as const;
+
 export function payTableToValues(payTable: PayTable, limits?: Partial<Pick<ValoresConfig, "limiteMensalAjudaCusto" | "limiteMensalHoraAula">>): ValoresConfig {
   return {
     extraNormalHora: payTable.valorHoraExtraNormal,
@@ -8,10 +14,10 @@ export function payTableToValues(payTable: PayTable, limits?: Partial<Pick<Valor
     extraMajoradoHora: payTable.valorHoraExtraMajorado,
     extraMajorado12h: payTable.valorExtraMajorado12h,
     extraMajorado24h: payTable.valorExtraMajorado24h,
-    horaAulaCFSD: payTable.valorHoraAulaCFSD,
-    horaAulaCFS: payTable.valorHoraAulaCFS,
-    horaAulaCFO: payTable.valorHoraAulaCFO,
-    horaAulaOutra: payTable.valorHoraAulaCFS,
+    horaAulaCFSD: FIXED_CLASS_VALUES.CFSD,
+    horaAulaCFS: FIXED_CLASS_VALUES.CFS,
+    horaAulaCFO: FIXED_CLASS_VALUES.CFO,
+    horaAulaOutra: FIXED_CLASS_VALUES.CFS,
     limiteMensalAjudaCusto: limits?.limiteMensalAjudaCusto ?? 288,
     limiteMensalHoraAula: limits?.limiteMensalHoraAula ?? 40,
   };
@@ -26,7 +32,8 @@ export function getActivePessoa(pessoas: Pessoa[], activePessoaId: string): Pess
 }
 
 export function getValorHoraAula(payTable: PayTable, subtipo: SubtipoHoraAula): number {
-  if (subtipo === "CFSD") return payTable.valorHoraAulaCFSD;
-  if (subtipo === "CFO") return payTable.valorHoraAulaCFO;
-  return payTable.valorHoraAulaCFS;
+  void payTable;
+  if (subtipo === "CFSD") return FIXED_CLASS_VALUES.CFSD;
+  if (subtipo === "CFO") return FIXED_CLASS_VALUES.CFO;
+  return FIXED_CLASS_VALUES.CFS;
 }

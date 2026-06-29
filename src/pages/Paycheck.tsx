@@ -24,9 +24,12 @@ export function Paycheck({ state, totals, onSave }: { state: AppState; totals: M
   return (
     <Section title="Conferencia de contracheque">
       <div className="grid gap-4">
+        <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+          Use esta aba depois que o contracheque sair: informe quanto foi pago em ajuda de custo e magisterio para comparar com o valor pagavel calculado pelo sistema.
+        </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <Stat label="Status" value={status} tone={status === "CONFERIDO" ? "good" : status === "DIVERGENTE" ? "warn" : "neutral"} />
-          <Stat label="Previsto" value={formatCurrency(totals.ajudaCusto.valorTotal + totals.horaAula.valorTotal)} />
+          <Stat label="Pagavel calculado" value={formatCurrency(totals.ajudaCusto.valorImplantavel + totals.horaAula.valorTotal)} />
           <Stat label="Diferenca" value={formatCurrency(totals.diferenca.total)} />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
