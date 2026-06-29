@@ -89,35 +89,49 @@ export function suggestFreeTimeWindows(params: {
   feriados?: FeriadoEstadual[];
   pessoaId?: string;
   limite?: number;
+  categoria?: "NORMAL" | "MAJORADO" | "QUALQUER";
 }): FreeTimeSuggestion[] {
   const feriados = params.feriados ?? [];
-  const limite = params.limite ?? 3;
-  const needed = Math.max(0, params.quantidadeHorasNecessarias);
+  const limite = params.limite ?? 12;
+  let remaining = Math.max(0, params.quantidadeHorasNecessarias);
   const start = new Date(params.dataInicial);
   const end = new Date(params.dataFinal);
   const suggestions: FreeTimeSuggestion[] = [];
   const seen = new Set<string>();
-  const blockTemplates = [
-    { startHour: 6, duration: 12 },
-    { startHour: 18, duration: 12 },
-    { startHour: 8, duration: 4 },
-    { startHour: 13, duration: 5 },
-    { startHour: 18, duration: 4 },
-  ];
+  const category = params.categoria ?? "QUALQUER";
+  const occupied = params.agendaExistente
+    .filter((item) => item.status !== "CANCELADO" && (!params.pessoaId || item.pessoaId === params.pessoaId))
+    .map((item) => ({ inicio: maxDate(new Date(item.dataHoraInicio), start), fim: minDate(new Date(item.dataHoraFim), end) }))
+    .filter((item) => item.fim > item.inicio)
+    .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
 
-  for (let day = parseLocalDate(toDateInput(start)); day <= end && suggestions.length < limite; day = addDays(day, 1)) {
-    for (const template of blockTemplates) {
-      const candidateStart = maxDate(parseLocalDate(toDateInput(day), template.startHour), start);
-      const maxDuration = Math.min(template.duration, needed || template.duration);
-      const candidateEnd = minDate(addHours(candidateStart, maxDuration), end);
-      const key = `${toDateTimeInput(candidateStart)}-${toDateTimeInput(candidateEnd)}`;
+  let cursor = start;
+  const freeRanges: Array<{ inicio: Date; fim: Date }> = [];
+  for (const busy of occupied) {
+    if (busy.inicio > cursor) freeRanges.push({ inicio: cursor, fim: busy.inicio });
+    if (busy.fim > cursor) cursor = busy.fim;
+  }
+  if (cursor < end) freeRanges.push({ inicio: cursor, fim: end });
 
-      if (candidateEnd <= candidateStart || seen.has(key)) continue;
-      if (calculateRealHours(toDateTimeInput(candidateStart), toDateTimeInput(candidateEnd)) <= 0) continue;
-      if (!isAvailable(candidateStart, candidateEnd, params.agendaExistente, params.pessoaId)) continue;
+  for (const range of freeRanges) {
+    for (let day = parseLocalDate(toDateInput(range.inicio)); day < range.fim && suggestions.length < limite && remaining > 0; day = addDays(day, 1)) {
+      const dayStart = maxDate(day, range.inicio);
+      const dayEnd = minDate(parseLocalDate(toDateInput(addDays(day, 1))), range.fim);
+      if (dayEnd <= dayStart) continue;
+
+      const dayClass = classifyBlock(toDateInput(dayStart), feriados).classificacao;
+      if (category === "NORMAL" && dayClass !== "NORMAL") continue;
+      if (category === "MAJORADO" && dayClass !== "MAJORADO") continue;
+
+      const hours = Math.min(remaining, (dayEnd.getTime() - dayStart.getTime()) / HOUR_MS);
+      const candidateEnd = addHours(dayStart, hours);
+      const key = `${toDateTimeInput(dayStart)}-${toDateTimeInput(candidateEnd)}`;
+      if (candidateEnd <= dayStart || seen.has(key)) continue;
+      if (!isAvailable(dayStart, candidateEnd, params.agendaExistente, params.pessoaId)) continue;
 
       seen.add(key);
-      suggestions.push(createSuggestion(candidateStart, candidateEnd, feriados));
+      suggestions.push(createSuggestion(dayStart, candidateEnd, feriados));
+      remaining = Number((remaining - hours).toFixed(2));
     }
   }
 

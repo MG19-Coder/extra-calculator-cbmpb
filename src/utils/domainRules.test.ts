@@ -195,6 +195,40 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(sugestoes[0].horas).toBeGreaterThan(0);
   });
 
+  it("sugere horas majoradas apenas em sexta, sabado, domingo ou feriado", () => {
+    const sugestoes = suggestFreeTimeWindows({
+      dataInicial: "2026-06-01T00:00",
+      dataFinal: "2026-06-10T23:59",
+      quantidadeHorasNecessarias: 24,
+      agendaExistente: [],
+      feriados: DEFAULT_FERIADOS,
+      pessoaId: cristian.id,
+      categoria: "MAJORADO",
+      limite: 10,
+    });
+
+    expect(sugestoes.length).toBeGreaterThan(0);
+    expect(sugestoes.every((item) => item.horasNormais === 0 && item.horasMajoradas > 0)).toBe(true);
+    expect(sugestoes.some((item) => item.inicio.startsWith("2026-06-03"))).toBe(false);
+  });
+
+  it("sugere horas normais apenas em segunda a quinta sem feriado", () => {
+    const sugestoes = suggestFreeTimeWindows({
+      dataInicial: "2026-06-01T00:00",
+      dataFinal: "2026-06-10T23:59",
+      quantidadeHorasNecessarias: 24,
+      agendaExistente: [],
+      feriados: DEFAULT_FERIADOS,
+      pessoaId: cristian.id,
+      categoria: "NORMAL",
+      limite: 10,
+    });
+
+    expect(sugestoes.length).toBeGreaterThan(0);
+    expect(sugestoes.every((item) => item.horasMajoradas === 0 && item.horasNormais > 0)).toBe(true);
+    expect(sugestoes.some((item) => item.inicio.startsWith("2026-06-05"))).toBe(false);
+  });
+
   it("nao gera conflito entre pessoas diferentes", () => {
     const mgCristian = createMgOrdinario("2026-06-11", valuesFor("2º SGT"), DEFAULT_FERIADOS, "MG Cristian", { pessoa: cristian });
     const mgMaria = createMgOrdinario("2026-06-11", valuesFor("CB"), DEFAULT_FERIADOS, "MG Maria", { pessoa: maria });

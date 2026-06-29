@@ -44,7 +44,7 @@ function App() {
     lancamentos: <LaunchList items={monthItems} onRemove={store.removeLaunch} />,
     novo: <NewLaunch state={state} onAdd={store.addLaunches} />,
     escala: <ScaleGenerator state={state} onAdd={store.addLaunches} />,
-    calendario: <CalendarMonth competencia={state.selectedMonth} items={state.lancamentos} feriados={state.feriados} valores={state.valores} activePessoaId={state.activePessoaId} onUpdate={store.updateLaunch} />,
+    calendario: <CalendarMonth competencia={state.selectedMonth} items={state.lancamentos} feriados={state.feriados} valores={state.valores} activePessoaId={state.activePessoaId} activePessoa={activePessoa} onUpdate={store.updateLaunch} onAdd={store.addLaunches} />,
     relatorio: <Report state={state} totals={totals} />,
     contracheque: <Paycheck state={state} totals={totals} onSave={store.upsertPaycheck} />,
     config: <SettingsPage state={state} onValues={store.updateValues} onImport={store.importScale} showDataManagement={false} />,

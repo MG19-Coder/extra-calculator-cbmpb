@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { ConflictSummary, FeriadoEstadual, FreeTimeSuggestion, Lancamento } from "../types";
+import type { ConflictSummary, FeriadoEstadual, FreeTimeSuggestion, Lancamento, Pessoa } from "../types";
 import { formatDate, formatDateTime, listMonthDays, toDateInput, toDateTimeInput } from "../utils/dateUtils";
 import { Field, inputClass, primaryButton, secondaryButton, Section } from "../components/ui";
 import { findHolidayForDate } from "../utils/holidayUtils";
@@ -70,6 +70,13 @@ type SuggestionGroup = {
   normalHours: number;
   majorHours: number;
   category: "NORMAL" | "MAJORADO" | "MISTO";
+};
+
+type SuggestionPlan = {
+  id: "normal" | "majorado" | "magisterio";
+  title: string;
+  suggestions: FreeTimeSuggestion[];
+  subtipo?: SubtipoHoraAula;
 };
 
 function groupSuggestionsByDay(suggestions: FreeTimeSuggestion[]): SuggestionGroup[] {
@@ -171,6 +178,8 @@ export function CalendarMonth({
   valores,
   activePessoaId,
   onUpdate,
+  onAdd,
+  activePessoa,
 }: {
   competencia: string;
   items: Lancamento[];
@@ -178,6 +187,8 @@ export function CalendarMonth({
   valores: ValoresConfig;
   activePessoaId: string;
   onUpdate: (item: Lancamento) => void;
+  onAdd: (items: Lancamento[]) => void;
+  activePessoa: Pessoa;
 }) {
   const days = listMonthDays(competencia);
   const calendarItems = items.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5", "HORA_AULA"].includes(item.tipo) && item.pessoaId === activePessoaId);
@@ -188,7 +199,7 @@ export function CalendarMonth({
   const [editEnd, setEditEnd] = useState("15:00");
   const [editSubtipo, setEditSubtipo] = useState<SubtipoHoraAula>("CFS");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
-  const [freeSuggestions, setFreeSuggestions] = useState<FreeTimeSuggestion[]>([]);
+  const [freePlans, setFreePlans] = useState<SuggestionPlan[]>([]);
   const [freeMessage, setFreeMessage] = useState("Clique em calcular para localizar horarios disponiveis.");
   const [desiredNormalHours, setDesiredNormalHours] = useState(0);
   const [desiredMajorHours, setDesiredMajorHours] = useState(0);
@@ -238,26 +249,127 @@ export function CalendarMonth({
     const [year, month] = competencia.split("-").map(Number);
     const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
     const end = new Date(year, month + 1, 0, 23, 59, 0, 0);
-    const requested = Math.max(desiredNormalHours, desiredMajorHours, desiredClassHours, conflictSummaries.reduce((sum, item) => sum + item.horasConflito, 0), 12);
-    const rawSuggestions = suggestFreeTimeWindows({
-      dataInicial: toDateTimeInput(start),
-      dataFinal: toDateTimeInput(end),
-      quantidadeHorasNecessarias: Math.min(12, requested),
-      agendaExistente: calendarItems,
-      feriados,
-      pessoaId: activePessoaId,
-      limite: 18,
-    });
-    const hasSpecificRequest = desiredNormalHours > 0 || desiredMajorHours > 0 || desiredClassHours > 0;
-    const suggestions = hasSpecificRequest
-      ? rawSuggestions.filter((item) => (
-          (desiredNormalHours > 0 && item.horasNormais > 0) ||
-          (desiredMajorHours > 0 && item.horasMajoradas > 0) ||
-          desiredClassHours > 0
-        ))
-      : rawSuggestions;
-    setFreeSuggestions(suggestions);
-    setFreeMessage(suggestions.length ? `${suggestions.length} horario(s) livre(s) encontrado(s).` : "Nenhum horario livre encontrado no mes atual ou seguinte.");
+    const plans: SuggestionPlan[] = [];
+    const blockers: Lancamento[] = [...calendarItems];
+    const addBlockers = (suggestions: FreeTimeSuggestion[]) => {
+      blockers.push(...suggestions.map((suggestion) => ({
+        id: `sugestao-${suggestion.inicio}-${suggestion.fim}`,
+        pessoaId: activePessoaId,
+        dataHoraInicio: suggestion.inicio,
+        dataHoraFim: suggestion.fim,
+        status: "LANCADO",
+      } as Lancamento)));
+    };
+
+    const normalHours = desiredNormalHours || (!desiredMajorHours && !desiredClassHours ? 12 : 0);
+    if (normalHours > 0) {
+      const suggestions = suggestFreeTimeWindows({
+        dataInicial: toDateTimeInput(start),
+        dataFinal: toDateTimeInput(end),
+        quantidadeHorasNecessarias: normalHours,
+        agendaExistente: blockers,
+        feriados,
+        pessoaId: activePessoaId,
+        limite: 24,
+        categoria: "NORMAL",
+      });
+      plans.push({ id: "normal", title: `Sugestao para implantacao de ${normalHours}h normais`, suggestions });
+      addBlockers(suggestions);
+    }
+
+    if (desiredMajorHours > 0) {
+      const suggestions = suggestFreeTimeWindows({
+        dataInicial: toDateTimeInput(start),
+        dataFinal: toDateTimeInput(end),
+        quantidadeHorasNecessarias: desiredMajorHours,
+        agendaExistente: blockers,
+        feriados,
+        pessoaId: activePessoaId,
+        limite: 24,
+        categoria: "MAJORADO",
+      });
+      plans.push({ id: "majorado", title: `Sugestao para implantacao de ${desiredMajorHours}h majoradas`, suggestions });
+      addBlockers(suggestions);
+    }
+
+    if (desiredClassHours > 0) {
+      let suggestions = suggestFreeTimeWindows({
+        dataInicial: toDateTimeInput(start),
+        dataFinal: toDateTimeInput(end),
+        quantidadeHorasNecessarias: desiredClassHours,
+        agendaExistente: blockers,
+        feriados,
+        pessoaId: activePessoaId,
+        limite: 24,
+        categoria: "NORMAL",
+      });
+      const foundHours = suggestions.reduce((sum, item) => sum + item.horas, 0);
+      if (foundHours < desiredClassHours) {
+        const extra = suggestFreeTimeWindows({
+          dataInicial: toDateTimeInput(start),
+          dataFinal: toDateTimeInput(end),
+          quantidadeHorasNecessarias: desiredClassHours - foundHours,
+          agendaExistente: [...blockers, ...suggestions.map((suggestion) => ({ id: `mag-${suggestion.inicio}`, pessoaId: activePessoaId, dataHoraInicio: suggestion.inicio, dataHoraFim: suggestion.fim, status: "LANCADO" } as Lancamento))],
+          feriados,
+          pessoaId: activePessoaId,
+          limite: 24,
+          categoria: "QUALQUER",
+        });
+        suggestions = [...suggestions, ...extra];
+      }
+      plans.push({ id: "magisterio", title: `Sugestao para magisterio ${desiredClassType} (${desiredClassHours}h)`, suggestions, subtipo: desiredClassType });
+      addBlockers(suggestions);
+    }
+
+    const total = plans.reduce((sum, plan) => sum + plan.suggestions.length, 0);
+    setFreePlans(plans);
+    setFreeMessage(total ? `${total} sugestao(oes) encontrada(s).` : "Nenhum horario livre encontrado no mes atual ou seguinte.");
+  }
+
+  function buildSuggestedLaunch(suggestion: FreeTimeSuggestion, plan: SuggestionPlan): Lancamento {
+    if (plan.id === "magisterio") {
+      return {
+        ...createHoraAula({
+          inicio: suggestion.inicio,
+          fim: suggestion.fim,
+          subtipo: plan.subtipo ?? desiredClassType,
+          disciplina: `Implantacao sugerida - magisterio ${plan.subtipo ?? desiredClassType}`,
+          competenciaImplantacao: competencia,
+          valores,
+          pessoa: activePessoa,
+        }),
+        titulo: `Implantacao sugerida - magisterio ${plan.subtipo ?? desiredClassType}`,
+      };
+    }
+
+    const isMajor = plan.id === "majorado";
+    return {
+      ...createExtraB5({
+        serviceDate: suggestion.inicio.slice(0, 10),
+        valores,
+        feriados,
+        pessoa: activePessoa,
+        inicio: suggestion.inicio,
+        fim: suggestion.fim,
+        horasNormais: isMajor ? 0 : suggestion.horas,
+        horasMajoradas: isMajor ? suggestion.horas : 0,
+        horasPagaveis: suggestion.horas,
+      }),
+      titulo: `Implantacao sugerida - ${isMajor ? "majorada" : "normal"}`,
+      observacoes: `Criado a partir dos horarios livres para implantacao.`,
+    };
+  }
+
+  function addSuggestionToCalendar(plan: SuggestionPlan, suggestion: FreeTimeSuggestion) {
+    if (!window.confirm("Deseja adicionar essa sugestao ao calendario?")) return;
+    onAdd([buildSuggestedLaunch(suggestion, plan)]);
+  }
+
+  function addAllSuggestionsToCalendar() {
+    const items = freePlans.flatMap((plan) => plan.suggestions.map((suggestion) => buildSuggestedLaunch(suggestion, plan)));
+    if (!items.length) return;
+    if (!window.confirm("Deseja adicionar essas sugestoes ao calendario?")) return;
+    onAdd(items);
   }
 
   return (
@@ -424,20 +536,36 @@ export function CalendarMonth({
               </select>
             </Field>
           </div>
-          {freeSuggestions.length > 0 && (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {groupSuggestionsByDay(freeSuggestions).map((group) => (
-                <article key={group.date} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
-                  <p className="font-semibold">{formatDate(group.date)} - {getWeekdayLabel(group.date)}</p>
-                  <p className="mt-1">{group.totalHours}h disponiveis</p>
-                  <div className="mt-2 grid gap-1">
-                    {group.suggestions.map((suggestion) => (
-                      <p key={`${suggestion.inicio}-${suggestion.fim}`}>- {suggestion.inicio.slice(11, 16)} as {suggestion.fim.slice(11, 16)} - {suggestion.horas}h</p>
-                    ))}
-                  </div>
-                  <p className="mt-2">Tipo: {categoryText(group.category, group.normalHours, group.majorHours)}</p>
-                  {desiredClassHours > 0 && <p>Magisterio: {desiredClassType}</p>}
-                </article>
+          {freePlans.length > 0 && (
+            <div className="mt-4 grid gap-4">
+              <button className={`${secondaryButton} w-full sm:w-fit`} type="button" onClick={addAllSuggestionsToCalendar}>Adicionar todas as sugestoes ao calendario</button>
+              {freePlans.map((plan) => (
+                <div key={plan.id} className="grid gap-3">
+                  <p className="text-sm font-semibold text-ink">{plan.title}</p>
+                  {plan.suggestions.length === 0 ? (
+                    <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">Nenhum horario encontrado para esta categoria.</p>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {groupSuggestionsByDay(plan.suggestions).map((group) => (
+                        <article key={`${plan.id}-${group.date}`} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+                          <p className="font-semibold">{formatDate(group.date)} - {getWeekdayLabel(group.date)}</p>
+                          <p className="mt-1">{group.totalHours}h disponiveis</p>
+                          <div className="mt-2 grid gap-2">
+                            {group.suggestions.map((suggestion) => (
+                              <div key={`${suggestion.inicio}-${suggestion.fim}`} className="rounded-md bg-white/70 p-2">
+                                <p>Das {suggestion.inicio.slice(11, 16)} as {suggestion.fim.slice(11, 16)} - {suggestion.horas}h</p>
+                                <p>Tipo: {plan.id === "magisterio" ? `magisterio ${plan.subtipo}` : categoryText(suggestion.categoria, suggestion.horasNormais, suggestion.horasMajoradas)}</p>
+                                {plan.id === "magisterio" && <p>Classificacao: {categoryText(suggestion.categoria, suggestion.horasNormais, suggestion.horasMajoradas)}</p>}
+                                <button className={`${secondaryButton} mt-2 w-full`} type="button" onClick={() => addSuggestionToCalendar(plan, suggestion)}>Adicionar ao calendario</button>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mt-2">Total do dia: {categoryText(group.category, group.normalHours, group.majorHours)}</p>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
