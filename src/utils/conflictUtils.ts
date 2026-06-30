@@ -27,6 +27,8 @@ function getOverlap(a: Lancamento, b: Lancamento): { inicio: Date; fim: Date; ho
 }
 
 function shouldIgnoreConflict(a: Lancamento, b: Lancamento): boolean {
+  if (a.tipo === "MG_ORDINARIO" || b.tipo === "MG_ORDINARIO") return true;
+
   const hasClass = a.tipo === "HORA_AULA" || b.tipo === "HORA_AULA";
   const hasOperational = ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(a.tipo)
     || ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(b.tipo);
@@ -44,6 +46,7 @@ function isAvailable(inicio: Date, fim: Date, agenda: Lancamento[], pessoaId?: s
 
   return !agenda.some((item) => {
     if (item.status === "CANCELADO") return false;
+    if (item.tipo === "MG_ORDINARIO") return false;
     if (pessoaId && item.pessoaId !== pessoaId) return false;
     return hasTimeOverlap(candidate, item);
   });
@@ -108,7 +111,7 @@ export function suggestFreeTimeWindows(params: {
   const seen = new Set<string>();
   const category = params.categoria ?? "QUALQUER";
   const occupied = params.agendaExistente
-    .filter((item) => item.status !== "CANCELADO" && (!params.pessoaId || item.pessoaId === params.pessoaId))
+    .filter((item) => item.status !== "CANCELADO" && item.tipo !== "MG_ORDINARIO" && (!params.pessoaId || item.pessoaId === params.pessoaId))
     .map((item) => ({ inicio: maxDate(new Date(item.dataHoraInicio), start), fim: minDate(new Date(item.dataHoraFim), end) }))
     .filter((item) => item.fim > item.inicio)
     .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());

@@ -161,6 +161,23 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(marked.every((item) => item.possuiConflito)).toBe(false);
   });
 
+  it("nao gera conflito entre prontidao ordinaria e extra 12h", () => {
+    const prontidao = createMgOrdinario("2026-06-29", DEFAULT_VALUES, DEFAULT_FERIADOS, "MG Ordinario", { pessoa: cristian });
+    const extra12h = createExtraB5({
+      serviceDate: "2026-06-29",
+      valores: DEFAULT_VALUES,
+      feriados: DEFAULT_FERIADOS,
+      pessoa: cristian,
+      inicio: "2026-06-29T06:00",
+      fim: "2026-06-29T18:00",
+      horasNormais: 12,
+      horasPagaveis: 12,
+    });
+    const marked = markConflicts([prontidao, extra12h], DEFAULT_FERIADOS);
+
+    expect(marked.every((item) => item.possuiConflito)).toBe(false);
+  });
+
   it("calcula periodo conflitante e sugestoes livres entre servicos operacionais", () => {
     const extra1 = createExtraB5({
       serviceDate: "2026-06-28",
