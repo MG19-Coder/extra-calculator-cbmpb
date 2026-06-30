@@ -8,6 +8,7 @@ import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from 
 import type { SubtipoHoraAula, ValoresConfig } from "../types";
 import { getHoraAulaSubtipo } from "../utils/launchCompatibility";
 import { getConflictSummaries, suggestFreeTimeWindows } from "../utils/conflictUtils";
+import { gerarPeriodosImplantaveis, type PeriodoCalendario } from "../utils/calendarDisplayUtils";
 
 function getCalendarDate(item: Lancamento): string {
   if (item.tipo === "HORA_AULA") {
@@ -245,11 +246,14 @@ export function CalendarMonth({
     setEditing(item);
   }
 
-  function renderLaunchButton(item: Lancamento, compact = false) {
+  function renderLaunchButton(period: PeriodoCalendario, compact = false) {
+    const item = period.lancamento;
+    const hoursText = period.exibirHoras ? ` ${period.horas}h` : "";
+    const timeText = period.horarioInicio && period.horarioFim ? ` - ${period.horarioInicio} as ${period.horarioFim}` : "";
     return (
-      <button key={item.id} type="button" onClick={() => startEditing(item)} title={getConflictTitle(item, calendarItems)} className={`rounded px-2 py-1 text-left text-xs font-medium ${compact ? "min-h-11 text-sm" : ""} ${getItemStyle(item)}`}>
-        <span className="mr-1 font-bold">{getItemLabel(item)}:</span>
-        {item.tipo === "HORA_AULA" ? `${item.horasAula}h ${getHoraAulaSubtipo(item)}` : `${item.horasPagaveis}h`}
+      <button key={period.id} type="button" onClick={() => startEditing(item)} title={period.observacao || getConflictTitle(item, calendarItems)} className={`rounded px-2 py-1 text-left text-xs font-medium ${compact ? "min-h-11 text-sm" : ""} ${getItemStyle(item)}`}>
+        <span className="mr-1 font-bold">{period.titulo}{hoursText}</span>
+        <span>{timeText}</span>
         {item.possuiConflito && <span className="ml-1 font-bold">Conflito</span>}
       </button>
     );
@@ -432,9 +436,9 @@ export function CalendarMonth({
         <div className={`${viewMode === "list" ? "grid md:hidden" : "hidden"} gap-3`}>
           {days.map((day) => {
             const key = toDateInput(day);
-            const dayItems = calendarItems.filter((item) => getCalendarDate(item) === key);
+            const dayPeriods = calendarItems.flatMap((item) => gerarPeriodosImplantaveis(item)).filter((period) => period.data === key);
             const holiday = findHolidayForDate(key, feriados);
-            if (dayItems.length === 0 && !holiday) return null;
+            if (dayPeriods.length === 0 && !holiday) return null;
             return (
               <article key={key} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -445,16 +449,18 @@ export function CalendarMonth({
                   {holiday && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Feriado</span>}
                 </div>
                 <div className="mt-3 grid gap-2">
-                  {dayItems.map((item) => (
-                    <div key={item.id} className="grid gap-1 rounded-md bg-white p-2 ring-1 ring-slate-200">
-                      {renderLaunchButton(item, true)}
-                      {getClassificationLabel(item) && <p className="text-xs text-slate-600">{getClassificationLabel(item)}</p>}
+                  {dayPeriods.map((period) => {
+                    const item = period.lancamento;
+                    return (
+                    <div key={period.id} className="grid gap-1 rounded-md bg-white p-2 ring-1 ring-slate-200">
+                      {renderLaunchButton(period, true)}
+                      {period.observacao && <p className="text-xs text-slate-600">{period.observacao}</p>}
                       {item.possuiConflito && item.detalhesConflito?.[0] && (
                         <p className="text-xs font-semibold text-red-700">Conflito: {item.detalhesConflito[0].inicioConflito.slice(11, 16)} as {item.detalhesConflito[0].fimConflito.slice(11, 16)}</p>
                       )}
-                      {item.observacoes && <p className="text-xs text-slate-500">{item.observacoes}</p>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             );
@@ -494,7 +500,7 @@ export function CalendarMonth({
               return <div key={`empty-${index}`} className="min-h-28 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 p-2" aria-hidden="true" />;
             }
             const key = toDateInput(cell.date);
-            const dayItems = calendarItems.filter((item) => getCalendarDate(item) === key);
+            const dayPeriods = calendarItems.flatMap((item) => gerarPeriodosImplantaveis(item)).filter((period) => period.data === key);
             const holiday = findHolidayForDate(key, feriados);
             return (
               <div key={key} className="min-h-28 rounded-lg border border-slate-200 bg-slate-50 p-2">
@@ -504,7 +510,7 @@ export function CalendarMonth({
                 </div>
                 {holiday && <p className="mt-1 truncate text-[11px] text-amber-700">{holiday.nome}</p>}
                 <div className="mt-2 grid gap-1">
-                  {dayItems.map((item) => renderLaunchButton(item))}
+                  {dayPeriods.map((period) => renderLaunchButton(period))}
                 </div>
               </div>
             );

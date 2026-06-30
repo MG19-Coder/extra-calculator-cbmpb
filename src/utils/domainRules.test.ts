@@ -5,6 +5,7 @@ import { DEFAULT_FERIADOS, DEFAULT_MILITAR, DEFAULT_VALUES } from "../store/defa
 import { markConflicts, suggestFreeTimeWindows } from "./conflictUtils";
 import { createExportPayload, mergeImportedState, parseImportedScale } from "./dataTransferUtils";
 import { listMonthCalendarCells } from "./dateUtils";
+import { gerarPeriodosImplantaveis } from "./calendarDisplayUtils";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "./launchFactory";
 import { payTableToValues } from "./payTableUtils";
 import { calculateMonthlyTotals } from "./quotaUtils";
@@ -153,15 +154,24 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(totals.horaAula.excedeuTeto).toBe(true);
   });
 
-  it("conflitos usam horas reais", () => {
+  it("nao gera conflito entre hora-aula e servico operacional", () => {
     const mg = createMgOrdinario("2026-06-11", valuesFor("2º SGT"), DEFAULT_FERIADOS, "MG", { pessoa: cristian });
     const aula = createHoraAula({ inicio: "2026-06-11T08:00", fim: "2026-06-11T12:00", subtipo: "CFS", disciplina: "Instrucao", valores: valuesFor("2º SGT"), pessoa: cristian });
     const marked = markConflicts([mg, aula], DEFAULT_FERIADOS);
-    expect(marked.every((item) => item.possuiConflito)).toBe(true);
+    expect(marked.every((item) => item.possuiConflito)).toBe(false);
   });
 
-  it("calcula periodo conflitante e sugestoes livres", () => {
-    const aula = createHoraAula({ inicio: "2026-06-27T08:00", fim: "2026-06-27T23:00", subtipo: "CFS", disciplina: "Instrucao", valores: valuesFor("2º SGT"), pessoa: cristian });
+  it("calcula periodo conflitante e sugestoes livres entre servicos operacionais", () => {
+    const extra1 = createExtraB5({
+      serviceDate: "2026-06-28",
+      valores: valuesFor("2Âº SGT"),
+      feriados: DEFAULT_FERIADOS,
+      pessoa: cristian,
+      inicio: "2026-06-27T08:00",
+      fim: "2026-06-27T23:00",
+      horasMajoradas: 15,
+      horasPagaveis: 15,
+    });
     const extra = createExtraB5({
       serviceDate: "2026-06-28",
       valores: valuesFor("2º SGT"),
@@ -172,7 +182,7 @@ describe("regras de servico, cotas e conflitos", () => {
       horasMajoradas: 12,
       horasPagaveis: 12,
     });
-    const marked = markConflicts([aula, extra], DEFAULT_FERIADOS);
+    const marked = markConflicts([extra1, extra], DEFAULT_FERIADOS);
     const detail = marked[0].detalhesConflito?.[0];
 
     expect(detail?.inicioConflito).toBe("2026-06-27T18:00");
@@ -299,6 +309,26 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(firstWeek).toEqual([null, 1, 2, 3, 4, 5, 6]);
     expect(cells[7].date?.getDate()).toBe(7);
     expect(cells.length % 7).toBe(0);
+  });
+
+  it("gera periodos visuais de prontidao sem mostrar 12h na prontidao", () => {
+    const launch = createMgOrdinario("2026-06-29", valuesFor("2Âº SGT"), DEFAULT_FERIADOS, "MG", { pessoa: cristian });
+    const periods = gerarPeriodosImplantaveis(launch);
+
+    expect(periods.map((period) => ({ data: period.data, titulo: period.titulo, horas: period.horas, exibirHoras: period.exibirHoras, inicio: period.horarioInicio, fim: period.horarioFim }))).toEqual([
+      { data: "2026-06-28", titulo: "Sobreaviso", horas: 12, exibirHoras: true, inicio: "18:00", fim: "06:00" },
+      { data: "2026-06-29", titulo: "Prontidao", horas: 12, exibirHoras: false, inicio: "06:00", fim: "18:00" },
+    ]);
+  });
+
+  it("gera extra de 24h dividido em dois periodos de 12h", () => {
+    const launch = createMgExtra("2026-06-10", valuesFor("2Âº SGT"), DEFAULT_FERIADOS, "Extra", { pessoa: cristian });
+    const periods = gerarPeriodosImplantaveis(launch);
+
+    expect(periods.map((period) => ({ data: period.data, titulo: period.titulo, horas: period.horas, exibirHoras: period.exibirHoras, inicio: period.horarioInicio, fim: period.horarioFim }))).toEqual([
+      { data: "2026-06-09", titulo: "Extra", horas: 12, exibirHoras: true, inicio: "18:00", fim: "06:00" },
+      { data: "2026-06-10", titulo: "Extra", horas: 12, exibirHoras: true, inicio: "06:00", fim: "18:00" },
+    ]);
   });
 });
 

@@ -26,6 +26,14 @@ function getOverlap(a: Lancamento, b: Lancamento): { inicio: Date; fim: Date; ho
   return horas > 0 ? { inicio, fim, horas } : null;
 }
 
+function shouldIgnoreConflict(a: Lancamento, b: Lancamento): boolean {
+  const hasClass = a.tipo === "HORA_AULA" || b.tipo === "HORA_AULA";
+  const hasOperational = ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(a.tipo)
+    || ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(b.tipo);
+
+  return hasClass && hasOperational;
+}
+
 function isAvailable(inicio: Date, fim: Date, agenda: Lancamento[], pessoaId?: string): boolean {
   const candidate = {
     id: "candidate",
@@ -154,6 +162,7 @@ export function markConflicts(lancamentos: Lancamento[], feriados: FeriadoEstadu
     const detalhesConflito = activeLaunches
       .filter((other) => other.id !== item.id && other.pessoaId === item.pessoaId)
       .map((other) => {
+        if (shouldIgnoreConflict(item, other)) return null;
         const overlap = getOverlap(item, other);
         if (!overlap) return null;
         const dataInicial = toDateTimeInput(parseLocalDate(item.competenciaImplantacao ? `${item.competenciaImplantacao}-01` : toDateInput(overlap.inicio)));
