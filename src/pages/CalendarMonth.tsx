@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ConflictSummary, FeriadoEstadual, FreeTimeSuggestion, Lancamento, Pessoa } from "../types";
-import { formatDate, formatDateTime, listMonthDays, toDateInput, toDateTimeInput } from "../utils/dateUtils";
+import { formatCurrency, formatDate, formatDateTime, listMonthCalendarCells, listMonthDays, toDateInput, toDateTimeInput } from "../utils/dateUtils";
 import { Field, inputClass, primaryButton, secondaryButton, Section } from "../components/ui";
 import { findHolidayForDate } from "../utils/holidayUtils";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from "../utils/launchFactory";
@@ -18,6 +18,7 @@ function getCalendarDate(item: Lancamento): string {
 
 function getItemStyle(item: Lancamento): string {
   if (item.possuiConflito) return "bg-red-100 text-red-800 ring-1 ring-red-200";
+  if (item.tipo === "PENDENCIA_ANTERIOR") return "bg-amber-50 text-amber-900 ring-1 ring-amber-200";
   if (item.tipo === "MG_ORDINARIO") return "bg-white text-slate-700 ring-1 ring-slate-200";
   if (item.tipo === "MG_EXTRA") return "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200";
   if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "bg-sky-50 text-sky-800 ring-1 ring-sky-200";
@@ -30,6 +31,7 @@ function getItemLabel(item: Lancamento): string {
   if (item.tipo === "MG_EXTRA") return "Extra";
   if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "Extra Administrativo";
   if (item.tipo === "HORA_AULA") return "Aula";
+  if (item.tipo === "PENDENCIA_ANTERIOR") return "Pendencia";
   return item.tipo;
 }
 
@@ -191,7 +193,15 @@ export function CalendarMonth({
   activePessoa: Pessoa;
 }) {
   const days = listMonthDays(competencia);
-  const calendarItems = items.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5", "HORA_AULA"].includes(item.tipo) && item.pessoaId === activePessoaId);
+  const calendarCells = listMonthCalendarCells(competencia);
+  const weekdayHeaders = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b"];
+  const calendarItems = items.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5", "HORA_AULA"].includes(item.tipo) && item.pessoaId === activePessoaId && item.status !== "CANCELADO");
+  const previousPendencies = items.filter((item) => (
+    item.tipo === "PENDENCIA_ANTERIOR"
+    && item.pessoaId === activePessoaId
+    && item.status !== "CANCELADO"
+    && (item.competenciaImplantacao === competencia || item.competenciaServico < competencia)
+  ));
   const conflictSummaries = getConflictSummaries(calendarItems.filter((item) => item.competenciaImplantacao === competencia || item.competenciaServico === competencia));
   const [editing, setEditing] = useState<Lancamento | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -451,10 +461,39 @@ export function CalendarMonth({
           })}
         </div>
 
+        {previousPendencies.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-bold uppercase tracking-wide text-amber-950">Pendencias anteriores</p>
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {previousPendencies.map((item) => (
+                <article key={item.id} className="rounded-md border border-amber-200 bg-white p-3 text-sm text-amber-950">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{item.titulo}</p>
+                      <p className="mt-1 text-xs text-amber-800">Origem: {item.origemPendencia || item.competenciaServico}</p>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900">{item.horasPagaveis}h</span>
+                  </div>
+                  <p className="mt-2 text-xs text-amber-800">{item.categoriaPagamento.toLowerCase()} - {formatCurrency(item.valorTotal)}</p>
+                </article>
+              ))}
+            </div>
+            <p className="mt-3 text-xs font-medium text-amber-900">Informacao historica separada: nao entra nas horas, valores previstos ou totais do mes atual.</p>
+          </div>
+        )}
+
         <div className={`${viewMode === "calendar" ? "block" : "hidden md:block"} overflow-x-auto`}>
         <div className="grid min-w-[760px] grid-cols-7 gap-2">
-          {days.map((day) => {
-            const key = toDateInput(day);
+          {weekdayHeaders.map((weekday) => (
+            <div key={weekday} className="rounded-md bg-ink px-2 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
+              {weekday}
+            </div>
+          ))}
+          {calendarCells.map((cell, index) => {
+            if (!cell.date) {
+              return <div key={`empty-${index}`} className="min-h-28 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 p-2" aria-hidden="true" />;
+            }
+            const key = toDateInput(cell.date);
             const dayItems = calendarItems.filter((item) => getCalendarDate(item) === key);
             const holiday = findHolidayForDate(key, feriados);
             return (

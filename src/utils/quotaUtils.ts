@@ -1,9 +1,14 @@
 import type { AppState, Lancamento, MonthlyTotals } from "../types";
 import { getConflictSummaries, markConflicts } from "./conflictUtils";
+import { getCompetencia } from "./dateUtils";
 import { getHoraAulaSubtipo } from "./launchCompatibility";
 
-function isInCompetencia(item: Lancamento, competencia: string): boolean {
-  return item.competenciaImplantacao === competencia && item.status !== "CANCELADO";
+function getServiceDate(item: Lancamento): string {
+  return item.tipo === "HORA_AULA" ? item.dataHoraInicio : `${item.dataReferenciaServico}T00:00`;
+}
+
+function isInSelectedMonth(item: Lancamento, competencia: string): boolean {
+  return getCompetencia(getServiceDate(item)) === competencia && item.status !== "CANCELADO";
 }
 
 function isActivePessoa(item: Lancamento, activePessoaId: string): boolean {
@@ -68,9 +73,15 @@ function calculatePayableHelpCost(items: Lancamento[], limit: number): {
 
 export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
   const marked = markConflicts(state.lancamentos, state.feriados);
-  const monthItems = marked.filter((item) => isInCompetencia(item, state.selectedMonth) && isActivePessoa(item, state.activePessoaId));
+  const monthItems = marked.filter((item) => isInSelectedMonth(item, state.selectedMonth) && isActivePessoa(item, state.activePessoaId));
+  const previousPendencies = marked.filter((item) => (
+    item.tipo === "PENDENCIA_ANTERIOR"
+    && item.status !== "CANCELADO"
+    && isActivePessoa(item, state.activePessoaId)
+    && (item.competenciaImplantacao === state.selectedMonth || item.competenciaServico < state.selectedMonth)
+  ));
   const conflitosDetalhados = getConflictSummaries(monthItems);
-  const helpCostItems = monthItems.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5", "PENDENCIA_ANTERIOR"].includes(item.tipo));
+  const helpCostItems = monthItems.filter((item) => ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(item.tipo));
   const classItems = monthItems.filter((item) => item.tipo === "HORA_AULA");
 
   const horasNormais = helpCostItems.reduce((sum, item) => sum + item.horasNormais, 0);
@@ -140,7 +151,7 @@ export function calculateMonthlyTotals(state: AppState): MonthlyTotals {
     },
     conflitos: marked.filter((item) => item.possuiConflito && item.competenciaImplantacao === state.selectedMonth && isActivePessoa(item, state.activePessoaId)),
     conflitosDetalhados,
-    pendencias: monthItems.filter((item) => item.tipo === "PENDENCIA_ANTERIOR"),
+    pendencias: previousPendencies,
     implantado: {
       ajudaCusto: implantadoAjuda,
       horaAula: implantadoAula,

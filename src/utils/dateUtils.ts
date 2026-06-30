@@ -80,3 +80,24 @@ export function listMonthDays(competencia: string): Date[] {
   }
   return days;
 }
+
+export type CalendarMonthCell = {
+  date: Date | null;
+  inCurrentMonth: boolean;
+};
+
+export function listMonthCalendarCells(competencia: string): CalendarMonthCell[] {
+  const { start } = monthBounds(competencia);
+  const days = listMonthDays(competencia);
+  const leadingEmptyCells = start.getDay();
+  const cells: CalendarMonthCell[] = [
+    ...Array.from({ length: leadingEmptyCells }, () => ({ date: null, inCurrentMonth: false })),
+    ...days.map((date) => ({ date, inCurrentMonth: true })),
+  ];
+  const trailingEmptyCells = (7 - (cells.length % 7)) % 7;
+
+  return [
+    ...cells,
+    ...Array.from({ length: trailingEmptyCells }, () => ({ date: null, inCurrentMonth: false })),
+  ];
+}

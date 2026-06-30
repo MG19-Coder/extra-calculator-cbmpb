@@ -4,7 +4,8 @@ import { DEFAULT_PAY_TABLES } from "../data/payTables";
 import { DEFAULT_FERIADOS, DEFAULT_MILITAR, DEFAULT_VALUES } from "../store/defaults";
 import { markConflicts, suggestFreeTimeWindows } from "./conflictUtils";
 import { createExportPayload, mergeImportedState, parseImportedScale } from "./dataTransferUtils";
-import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from "./launchFactory";
+import { listMonthCalendarCells } from "./dateUtils";
+import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "./launchFactory";
 import { payTableToValues } from "./payTableUtils";
 import { calculateMonthlyTotals } from "./quotaUtils";
 import { generateWhatsAppReport } from "./reportUtils";
@@ -246,6 +247,58 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(report).toContain("Militar: Cristian");
     expect(report).toContain("Graduacao: 2º SGT");
     expect(totals.ajudaCusto.horasTotal).toBe(24);
+  });
+
+  it("mantem pendencias anteriores fora dos totais do mes", () => {
+    const launch = createMgExtra("2026-06-10", valuesFor("2Âº SGT"), DEFAULT_FERIADOS, "Extra", { pessoa: cristian });
+    const pendencia = createPendenciaAnterior({
+      competenciaImplantacao: "2026-06",
+      mesOrigem: "05",
+      anoOrigem: "2026",
+      horas: 12,
+      tipo: "MAJORADO",
+      valores: valuesFor("2Âº SGT"),
+      pessoa: cristian,
+    });
+    const totals = calculateMonthlyTotals(stateOf({ lancamentos: [launch, pendencia] }));
+
+    expect(totals.pendencias).toHaveLength(1);
+    expect(totals.ajudaCusto.horasTotal).toBe(24);
+    expect(totals.ajudaCusto.horasMajoradas).toBe(0);
+    expect(totals.ajudaCusto.valorTotal).toBe(launch.valorTotal);
+  });
+
+  it("calcula totais apenas pela data do servico no mes selecionado", () => {
+    const maioImplantadoEmJunho = createHoraAula({
+      inicio: "2026-05-31T08:00",
+      fim: "2026-05-31T12:00",
+      subtipo: "CFS",
+      disciplina: "Instrucao",
+      competenciaImplantacao: "2026-06",
+      valores: valuesFor("2Âº SGT"),
+      pessoa: cristian,
+    });
+    const junho = createHoraAula({
+      inicio: "2026-06-01T08:00",
+      fim: "2026-06-01T12:00",
+      subtipo: "CFS",
+      disciplina: "Instrucao",
+      competenciaImplantacao: "2026-06",
+      valores: valuesFor("2Âº SGT"),
+      pessoa: cristian,
+    });
+    const totals = calculateMonthlyTotals(stateOf({ lancamentos: [maioImplantadoEmJunho, junho] }));
+
+    expect(totals.horaAula.horasTotal).toBe(4);
+  });
+
+  it("monta calendario mensal iniciando no domingo", () => {
+    const cells = listMonthCalendarCells("2026-06");
+    const firstWeek = cells.slice(0, 7).map((cell) => cell.date?.getDate() ?? null);
+
+    expect(firstWeek).toEqual([null, 1, 2, 3, 4, 5, 6]);
+    expect(cells[7].date?.getDate()).toBe(7);
+    expect(cells.length % 7).toBe(0);
   });
 });
 
