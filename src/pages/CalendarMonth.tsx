@@ -17,32 +17,25 @@ function getCalendarDate(item: Lancamento): string {
   return item.dataReferenciaServico;
 }
 
-function getPaymentTone(item: Lancamento): "normal" | "majorado" {
-  return item.horasMajoradas > 0 ? "majorado" : "normal";
+function isWeekendOrHoliday(date: string, feriados: FeriadoEstadual[]): boolean {
+  const [year, month, day] = date.split("-").map(Number);
+  const weekday = new Date(year, month - 1, day).getDay();
+  return weekday === 0 || weekday === 5 || weekday === 6 || Boolean(findHolidayForDate(date, feriados));
 }
 
-function getPeriodStyle(period: PeriodoCalendario): string {
+function isPaidExtraPeriod(period: PeriodoCalendario): boolean {
+  const item = period.lancamento;
+  if (!period.exibirHoras) return false;
+  return ["MG_ORDINARIO", "MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(item.tipo);
+}
+
+function getPeriodStyle(period: PeriodoCalendario, feriados: FeriadoEstadual[]): string {
   const item = period.lancamento;
   if (item.possuiConflito) return "bg-red-100 text-red-800 ring-1 ring-red-200";
-  if (item.tipo === "PENDENCIA_ANTERIOR") return "bg-amber-50 text-amber-900 ring-1 ring-amber-200";
   if (item.tipo === "HORA_AULA") return "bg-violet-50 text-violet-800 ring-1 ring-violet-200";
-  if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") {
-    return getPaymentTone(item) === "majorado"
-      ? "bg-teal-100 text-teal-950 ring-1 ring-teal-400"
-      : "bg-cyan-50 text-cyan-900 ring-1 ring-cyan-300";
-  }
-  if (item.tipo === "MG_ORDINARIO" && period.titulo === "Prontidao") return "bg-slate-100 text-slate-700 ring-1 ring-slate-300";
-  if (item.tipo === "MG_ORDINARIO") {
-    return getPaymentTone(item) === "majorado"
-      ? "bg-orange-50 text-orange-900 ring-1 ring-orange-300"
-      : "bg-sky-50 text-sky-900 ring-1 ring-sky-200";
-  }
-  if (item.tipo === "MG_EXTRA") {
-    return getPaymentTone(item) === "majorado"
-      ? "bg-rose-50 text-rose-900 ring-1 ring-rose-300"
-      : "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200";
-  }
-  return "bg-slate-100 text-slate-700 ring-1 ring-slate-200";
+  if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "bg-cyan-50 text-cyan-900 ring-1 ring-cyan-300";
+  if (isPaidExtraPeriod(period) && isWeekendOrHoliday(period.data, feriados)) return "bg-orange-50 text-orange-900 ring-1 ring-orange-300";
+  return "bg-slate-100 text-slate-700 ring-1 ring-slate-300";
 }
 
 function getItemLabel(item: Lancamento): string {
@@ -269,7 +262,7 @@ export function CalendarMonth({
     const hoursText = period.exibirHoras ? ` ${period.horas}h` : "";
     const timeText = period.horarioInicio && period.horarioFim ? ` - ${period.horarioInicio} as ${period.horarioFim}` : "";
     return (
-      <button key={period.id} type="button" onClick={() => startEditing(item)} title={period.observacao || getConflictTitle(item, calendarItems)} className={`rounded px-2 py-1 text-left text-xs font-medium ${compact ? "min-h-11 text-sm" : ""} ${getPeriodStyle(period)}`}>
+      <button key={period.id} type="button" onClick={() => startEditing(item)} title={period.observacao || getConflictTitle(item, calendarItems)} className={`rounded px-2 py-1 text-left text-xs font-medium ${compact ? "min-h-11 text-sm" : ""} ${getPeriodStyle(period, feriados)}`}>
         <span className="mr-1 font-bold">{period.titulo}{hoursText}</span>
         <span>{timeText}</span>
         {item.possuiConflito && <span className="ml-1 font-bold">Conflito</span>}
