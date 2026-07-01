@@ -8,20 +8,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module">
-      const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-
-      if (localHosts.has(window.location.hostname)) {
-        import("/src/main.tsx");
-      } else {
-        const stylesheet = document.createElement("link");
-        stylesheet.rel = "stylesheet";
-        stylesheet.href = "/extra-calculator-cbmpb/assets/main-Db3Q9cDQ.css";
-        document.head.appendChild(stylesheet);
-
-        const appModule = "/extra-calculator-cbmpb/" + "assets/main-CMWLOYLk.js";
-        import(appModule);
-      }
-    </script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
