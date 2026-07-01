@@ -7,8 +7,15 @@ function getServiceDate(item: Lancamento): string {
   return item.tipo === "HORA_AULA" ? item.dataHoraInicio : `${item.dataReferenciaServico}T00:00`;
 }
 
+function getPayableMonthDate(item: Lancamento): string {
+  if (item.tipo === "MG_ORDINARIO") {
+    return item.dataHoraInicio;
+  }
+  return getServiceDate(item);
+}
+
 function isInSelectedMonth(item: Lancamento, competencia: string): boolean {
-  return getCompetencia(getServiceDate(item)) === competencia && item.status !== "CANCELADO";
+  return getCompetencia(getPayableMonthDate(item)) === competencia && item.status !== "CANCELADO";
 }
 
 function isActivePessoa(item: Lancamento, activePessoaId: string): boolean {

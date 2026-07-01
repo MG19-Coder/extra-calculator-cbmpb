@@ -122,6 +122,7 @@ export interface Lancamento {
   competenciaImplantacao: string;
   status: StatusLancamento;
   observacoes: string;
+  observacao?: string;
   origemPendencia: string;
   possuiConflito: boolean;
   idsConflitantes: string[];

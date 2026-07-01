@@ -13,6 +13,10 @@ function displayType(item: Lancamento): string {
   return item.tipo;
 }
 
+function displayObservation(item: Lancamento): string {
+  return item.observacao || item.observacoes || "";
+}
+
 export function LaunchList({ items, onRemove }: { items: Lancamento[]; onRemove: (id: string) => void }) {
   return (
     <Section title="Lancamentos">
@@ -35,6 +39,9 @@ export function LaunchList({ items, onRemove }: { items: Lancamento[]; onRemove:
               <span>Aula: <strong>{item.horasAula}h</strong></span>
               <span>Valor: <strong>{formatCurrency(item.valorTotal)}</strong></span>
             </div>
+            {item.tipo === "PENDENCIA_ANTERIOR" && displayObservation(item) && (
+              <p className="mt-2 text-xs text-slate-600">{displayObservation(item)}</p>
+            )}
             {item.possuiConflito && (
               <div className="mt-2 rounded-md bg-red-100 p-2 text-sm text-red-900">
                 <p className="font-semibold">Conflito com {item.idsConflitantes.length} lancamento(s).</p>

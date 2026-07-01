@@ -22,6 +22,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
   const [horasPagaveis, setHorasPagaveis] = useState(24);
   const [origemMes, setOrigemMes] = useState("05");
   const [origemAno, setOrigemAno] = useState("2026");
+  const [observacaoPendencia, setObservacaoPendencia] = useState("");
   const [notice, setNotice] = useState("");
   const formRef = useRef<HTMLDivElement | null>(null);
   const serviceDateRef = useRef<HTMLInputElement | null>(null);
@@ -54,7 +55,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
     } else if (preset === "EXTRA_ADMINISTRATIVO") {
       item = createExtraB5({ serviceDate, valores, feriados: state.feriados, pessoa });
     } else if (preset === "PENDENCIA_ANTERIOR") {
-      item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores, pessoa });
+      item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores, pessoa, observacao: observacaoPendencia });
     } else {
       const inicio = `${aulaDate}T${horaInicioAula}`;
       const fim = `${aulaDate}T${horaFimAula}`;
@@ -106,15 +107,20 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
         )}
 
         {preset === "PENDENCIA_ANTERIOR" && (
-          <div className="grid gap-3 sm:grid-cols-4">
-            <Field label="Mes origem"><input ref={pendenciaMesRef} className={inputClass} value={origemMes} onChange={(event) => setOrigemMes(event.target.value.padStart(2, "0").slice(-2))} /></Field>
-            <Field label="Ano origem"><input className={inputClass} value={origemAno} onChange={(event) => setOrigemAno(event.target.value)} /></Field>
-            <Field label="Horas"><input className={inputClass} type="number" value={horasPagaveis} onChange={(event) => setHorasPagaveis(Number(event.target.value))} /></Field>
-            <Field label="Tipo">
-              <select className={inputClass} value={horasMajoradas > 0 ? "MAJORADO" : "NORMAL"} onChange={(event) => { setHorasMajoradas(event.target.value === "MAJORADO" ? horasPagaveis : 0); setHorasNormais(event.target.value === "NORMAL" ? horasPagaveis : 0); }}>
-                <option value="NORMAL">Normal</option>
-                <option value="MAJORADO">Majorado</option>
-              </select>
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <Field label="Mes origem"><input ref={pendenciaMesRef} className={inputClass} value={origemMes} onChange={(event) => setOrigemMes(event.target.value.padStart(2, "0").slice(-2))} /></Field>
+              <Field label="Ano origem"><input className={inputClass} value={origemAno} onChange={(event) => setOrigemAno(event.target.value)} /></Field>
+              <Field label="Horas"><input className={inputClass} type="number" value={horasPagaveis} onChange={(event) => setHorasPagaveis(Number(event.target.value))} /></Field>
+              <Field label="Tipo">
+                <select className={inputClass} value={horasMajoradas > 0 ? "MAJORADO" : "NORMAL"} onChange={(event) => { setHorasMajoradas(event.target.value === "MAJORADO" ? horasPagaveis : 0); setHorasNormais(event.target.value === "NORMAL" ? horasPagaveis : 0); }}>
+                  <option value="NORMAL">Normal</option>
+                  <option value="MAJORADO">Majorado</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Observacao">
+              <textarea className={inputClass} rows={3} value={observacaoPendencia} onChange={(event) => setObservacaoPendencia(event.target.value)} placeholder="Ex.: Extra implantado parcialmente" />
             </Field>
           </div>
         )}

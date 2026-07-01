@@ -4,7 +4,7 @@ import type { ConflictSummary, FeriadoEstadual, FreeTimeSuggestion, Lancamento, 
 import { formatCurrency, formatDate, formatDateTime, listMonthCalendarCells, listMonthDays, toDateInput, toDateTimeInput } from "../utils/dateUtils";
 import { Field, inputClass, primaryButton, secondaryButton, Section } from "../components/ui";
 import { findHolidayForDate } from "../utils/holidayUtils";
-import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario } from "../utils/launchFactory";
+import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
 import type { SubtipoHoraAula, ValoresConfig } from "../types";
 import { getHoraAulaSubtipo } from "../utils/launchCompatibility";
 import { getConflictSummaries, suggestFreeTimeWindows } from "../utils/conflictUtils";
@@ -68,6 +68,10 @@ function getConflictTitle(item: Lancamento, items: Lancamento[]): string {
   return `Conflito com: ${otherLabel}. Periodo conflitante: ${formatDateTime(detail.inicioConflito)} ate ${formatDateTime(detail.fimConflito)}. Total: ${detail.horasConflito}h.`;
 }
 
+function getLaunchObservation(item: Lancamento): string {
+  return item.observacao || item.observacoes || "";
+}
+
 function suggestionLabel(suggestion: FreeTimeSuggestion): string {
   const label = suggestion.categoria === "NORMAL"
     ? `${suggestion.horas}h normais`
@@ -92,6 +96,8 @@ type SuggestionPlan = {
   suggestions: FreeTimeSuggestion[];
   subtipo?: SubtipoHoraAula;
 };
+
+type NewCalendarPreset = "MG_ORDINARIO" | "MG_EXTRA" | "EXTRA_ADMINISTRATIVO" | "HORA_AULA" | "PENDENCIA_ANTERIOR";
 
 function groupSuggestionsByDay(suggestions: FreeTimeSuggestion[]): SuggestionGroup[] {
   const byDate = new Map<string, SuggestionGroup>();
@@ -227,8 +233,25 @@ export function CalendarMonth({
   const [desiredMajorHours, setDesiredMajorHours] = useState(0);
   const [desiredClassHours, setDesiredClassHours] = useState(0);
   const [desiredClassType, setDesiredClassType] = useState<SubtipoHoraAula>("CFS");
+  const [creatingDate, setCreatingDate] = useState("");
+  const [newPreset, setNewPreset] = useState<NewCalendarPreset>("MG_ORDINARIO");
+  const [newStart, setNewStart] = useState("00:00");
+  const [newEnd, setNewEnd] = useState("15:00");
+  const [newClassType, setNewClassType] = useState<SubtipoHoraAula>("CFS");
+  const [newDiscipline, setNewDiscipline] = useState("Instrucao");
+  const [newPendencyMonth, setNewPendencyMonth] = useState(competencia.slice(5, 7));
+  const [newPendencyYear, setNewPendencyYear] = useState(competencia.slice(0, 4));
+  const [newPendencyHours, setNewPendencyHours] = useState(12);
+  const [newPendencyType, setNewPendencyType] = useState<"NORMAL" | "MAJORADO">("MAJORADO");
+  const [newPendencyObservation, setNewPendencyObservation] = useState("");
   const editRef = useRef<HTMLDivElement | null>(null);
   const editDateRef = useRef<HTMLInputElement | null>(null);
+  const createRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setNewPendencyMonth(competencia.slice(5, 7));
+    setNewPendencyYear(competencia.slice(0, 4));
+  }, [competencia]);
 
   useEffect(() => {
     if (!editing) return;
@@ -237,6 +260,13 @@ export function CalendarMonth({
     setEditEnd(editing.dataHoraFim.slice(11, 16));
     setEditSubtipo(getHoraAulaSubtipo(editing));
   }, [editing]);
+
+  useEffect(() => {
+    if (!creatingDate) return;
+    window.setTimeout(() => {
+      createRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }, [creatingDate]);
 
   useEffect(() => {
     if (!editing) return;
@@ -257,12 +287,54 @@ export function CalendarMonth({
     setEditing(item);
   }
 
+  function startCreating(date: string) {
+    setCreatingDate(date);
+    setEditing(null);
+  }
+
+  function submitNewLaunch() {
+    if (!creatingDate) return;
+    let item: Lancamento;
+
+    if (newPreset === "MG_ORDINARIO") {
+      item = createMgOrdinario(creatingDate, valores, feriados, "MG Ordinario", { pessoa: activePessoa });
+    } else if (newPreset === "MG_EXTRA") {
+      item = createMgExtra(creatingDate, valores, feriados, "MG Extra", { pessoa: activePessoa });
+    } else if (newPreset === "EXTRA_ADMINISTRATIVO") {
+      item = createExtraB5({ serviceDate: creatingDate, valores, feriados, pessoa: activePessoa });
+    } else if (newPreset === "PENDENCIA_ANTERIOR") {
+      item = createPendenciaAnterior({
+        competenciaImplantacao: competencia,
+        mesOrigem: newPendencyMonth,
+        anoOrigem: newPendencyYear,
+        horas: newPendencyHours,
+        tipo: newPendencyType,
+        valores,
+        pessoa: activePessoa,
+        observacao: newPendencyObservation,
+      });
+    } else {
+      item = createHoraAula({
+        inicio: `${creatingDate}T${newStart}`,
+        fim: `${creatingDate}T${newEnd}`,
+        subtipo: newClassType,
+        disciplina: newDiscipline,
+        competenciaImplantacao: competencia,
+        valores,
+        pessoa: activePessoa,
+      });
+    }
+
+    onAdd([item]);
+    setCreatingDate("");
+  }
+
   function renderLaunchButton(period: PeriodoCalendario, compact = false) {
     const item = period.lancamento;
     const hoursText = period.exibirHoras ? ` ${period.horas}h` : "";
     const timeText = period.horarioInicio && period.horarioFim ? ` - ${period.horarioInicio} as ${period.horarioFim}` : "";
     return (
-      <button key={period.id} type="button" onClick={() => startEditing(item)} title={period.observacao || getConflictTitle(item, calendarItems)} className={`rounded px-2 py-1 text-left text-xs font-medium ${compact ? "min-h-11 text-sm" : ""} ${getPeriodStyle(period, feriados)}`}>
+      <button key={period.id} type="button" onClick={(event) => { event.stopPropagation(); startEditing(item); }} title={period.observacao || getConflictTitle(item, calendarItems)} className={`rounded px-2 py-1 text-left text-xs font-medium ${compact ? "min-h-11 text-sm" : ""} ${getPeriodStyle(period, feriados)}`}>
         <span className="mr-1 font-bold">{period.titulo}{hoursText}</span>
         <span>{timeText}</span>
         {item.possuiConflito && <span className="ml-1 font-bold">Conflito</span>}
@@ -444,6 +516,80 @@ export function CalendarMonth({
           </div>
         )}
 
+        {creatingDate && (
+          <div ref={createRef} className="max-h-[90vh] overflow-y-auto rounded-lg border border-slate-300 bg-white p-4 pb-6 shadow-soft scroll-mt-4">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-ink">Novo lancamento no calendario</p>
+                <p className="text-xs text-slate-500">{formatDate(creatingDate)}</p>
+              </div>
+              <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-600" type="button" onClick={() => setCreatingDate("")} aria-label="Fechar cadastro">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Tipo de lancamento">
+                  <select className={inputClass} value={newPreset} onChange={(event) => setNewPreset(event.target.value as NewCalendarPreset)}>
+                    <option value="MG_ORDINARIO">Prontidao</option>
+                    <option value="MG_EXTRA">Extra</option>
+                    <option value="EXTRA_ADMINISTRATIVO">Extra Administrativo</option>
+                    <option value="HORA_AULA">Aula/Magisterio</option>
+                    <option value="PENDENCIA_ANTERIOR">Pendencia</option>
+                  </select>
+                </Field>
+                <Field label={newPreset === "HORA_AULA" ? "Dia da aula" : "Data"}>
+                  <input className={inputClass} type="date" value={creatingDate} onChange={(event) => setCreatingDate(event.target.value)} />
+                </Field>
+              </div>
+
+              {newPreset === "HORA_AULA" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Inicio"><input className={inputClass} type="time" value={newStart} onChange={(event) => setNewStart(event.target.value)} /></Field>
+                  <Field label="Fim"><input className={inputClass} type="time" value={newEnd} onChange={(event) => setNewEnd(event.target.value)} /></Field>
+                  <Field label="Curso/tipo de aula">
+                    <select className={inputClass} value={newClassType} onChange={(event) => setNewClassType(event.target.value as SubtipoHoraAula)}>
+                      <option value="CFSD">CFSD</option>
+                      <option value="CFS">CFS</option>
+                      <option value="CFO">CFO</option>
+                    </select>
+                  </Field>
+                  <Field label="Disciplina"><input className={inputClass} value={newDiscipline} onChange={(event) => setNewDiscipline(event.target.value)} /></Field>
+                </div>
+              )}
+
+              {newPreset === "PENDENCIA_ANTERIOR" && (
+                <div className="grid gap-3">
+                  <div className="grid gap-3 sm:grid-cols-4">
+                    <Field label="Mes origem"><input className={inputClass} value={newPendencyMonth} onChange={(event) => setNewPendencyMonth(event.target.value.padStart(2, "0").slice(-2))} /></Field>
+                    <Field label="Ano origem"><input className={inputClass} value={newPendencyYear} onChange={(event) => setNewPendencyYear(event.target.value)} /></Field>
+                    <Field label="Horas"><input className={inputClass} type="number" min="0" step="0.5" value={newPendencyHours} onChange={(event) => setNewPendencyHours(Number(event.target.value))} /></Field>
+                    <Field label="Tipo">
+                      <select className={inputClass} value={newPendencyType} onChange={(event) => setNewPendencyType(event.target.value as "NORMAL" | "MAJORADO")}>
+                        <option value="NORMAL">Normal</option>
+                        <option value="MAJORADO">Majorado</option>
+                      </select>
+                    </Field>
+                  </div>
+                  <Field label="Observacao">
+                    <textarea className={inputClass} rows={3} value={newPendencyObservation} onChange={(event) => setNewPendencyObservation(event.target.value)} placeholder="Ex.: Pendente de conferencia no contracheque" />
+                  </Field>
+                </div>
+              )}
+
+              {newPreset !== "HORA_AULA" && newPreset !== "PENDENCIA_ANTERIOR" && (
+                <p className="text-xs text-slate-500">Servicos operacionais seguem o padrao cadastrado para cada tipo.</p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <button className={primaryButton} type="button" onClick={submitNewLaunch}>Adicionar lancamento</button>
+                <button className={secondaryButton} type="button" onClick={() => setCreatingDate("")}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={`${viewMode === "list" ? "grid md:hidden" : "hidden"} gap-3`}>
           {days.map((day) => {
             const key = toDateInput(day);
@@ -492,6 +638,7 @@ export function CalendarMonth({
                     <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900">{item.horasPagaveis}h</span>
                   </div>
                   <p className="mt-2 text-xs text-amber-800">{item.categoriaPagamento.toLowerCase()} - {formatCurrency(item.valorTotal)}</p>
+                  {getLaunchObservation(item) && <p className="mt-2 text-xs text-amber-700">{getLaunchObservation(item)}</p>}
                 </article>
               ))}
             </div>
@@ -514,7 +661,7 @@ export function CalendarMonth({
             const dayPeriods = calendarItems.flatMap((item) => gerarPeriodosImplantaveis(item)).filter((period) => period.data === key);
             const holiday = findHolidayForDate(key, feriados);
             return (
-              <div key={key} className="min-h-28 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <div key={key} className="min-h-28 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 p-2 transition hover:bg-white" onClick={() => startCreating(key)} title="Clique no espaco vazio para novo lancamento">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-xs font-semibold text-slate-600">{formatDate(key)}</p>
                   {holiday && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800" title={holiday.nome}>Feriado</span>}

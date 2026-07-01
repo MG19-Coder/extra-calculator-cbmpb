@@ -31,6 +31,7 @@ export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, f
   const serviceDay = parseLocalDate(serviceDate);
   const inicio = toDateTimeInput(parseLocalDate(toDateInput(addDays(serviceDay, -1)), 18));
   const fim = toDateTimeInput(parseLocalDate(serviceDate, 18));
+  const competenciaSobreaviso = getCompetencia(inicio);
   const blocks = generateHelpCostBlocks(serviceDate, "MG_ORDINARIO", feriados);
   const classified = calculateClassifiedHours(blocks);
   const valorTotal = calculateHelpCostValue(classified.horasNormais, classified.horasMajoradas, valores);
@@ -57,8 +58,8 @@ export function createMgOrdinario(serviceDate: string, valores: ValoresConfig, f
     valorHoraMajoradaUsado: valores.extraMajoradoHora,
     valorHoraAulaUsado: 0,
     valorTotal,
-    competenciaServico: getCompetencia(`${serviceDate}T00:00`),
-    competenciaImplantacao: getCompetencia(`${serviceDate}T00:00`),
+    competenciaServico: competenciaSobreaviso,
+    competenciaImplantacao: competenciaSobreaviso,
     status: baseStatus(),
     observacoes: blocks.map((block) => `${block.dataReferencia}: ${block.classificacao.toLowerCase()} (${block.motivo})`).join("; "),
     origemPendencia: "",
@@ -222,10 +223,12 @@ export function createPendenciaAnterior(params: {
   tipo: "NORMAL" | "MAJORADO";
   valores: ValoresConfig;
   pessoa?: Pessoa;
+  observacao?: string;
 }): Lancamento {
   const date = `${params.competenciaImplantacao}-01T00:00`;
   const horasNormais = params.tipo === "NORMAL" ? params.horas : 0;
   const horasMajoradas = params.tipo === "MAJORADO" ? params.horas : 0;
+  const observacao = params.observacao?.trim() || "Resto de mes anterior.";
   return {
     ...launchMeta({ pessoa: params.pessoa }),
     id: id("pend"),
@@ -251,7 +254,8 @@ export function createPendenciaAnterior(params: {
     competenciaServico: `${params.anoOrigem}-${params.mesOrigem}`,
     competenciaImplantacao: params.competenciaImplantacao,
     status: baseStatus(),
-    observacoes: "Resto de mes anterior.",
+    observacoes: observacao,
+    observacao,
     origemPendencia: `${params.mesOrigem}/${params.anoOrigem}`,
     possuiConflito: false,
     idsConflitantes: [],

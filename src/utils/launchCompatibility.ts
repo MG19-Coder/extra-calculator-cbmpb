@@ -1,4 +1,5 @@
 import type { Lancamento, Pessoa, SubtipoHoraAula } from "../types";
+import { getCompetencia } from "./dateUtils";
 
 export function getHoraAulaSubtipo(item: Lancamento): SubtipoHoraAula {
   if (item.subtipoHoraAula) return item.subtipoHoraAula;
@@ -18,6 +19,8 @@ export function normalizeLaunch(item: Lancamento, fallbackPessoa?: Pessoa): Lanc
     valorHoraNormalUsado: item.valorHoraNormalUsado ?? item.valorHoraNormal ?? 0,
     valorHoraMajoradaUsado: item.valorHoraMajoradaUsado ?? item.valorHoraMajorada ?? 0,
     valorHoraAulaUsado: item.valorHoraAulaUsado ?? item.valorHoraAula ?? 0,
+    observacoes: item.observacoes ?? item.observacao ?? "",
+    observacao: item.observacao ?? item.observacoes ?? "",
     createdAt: item.createdAt ?? now,
     updatedAt: item.updatedAt ?? now,
   };
@@ -39,6 +42,15 @@ export function normalizeLaunch(item: Lancamento, fallbackPessoa?: Pessoa): Lanc
       tipo: "EXTRA_ADMINISTRATIVO",
       titulo: base.titulo === "Extra B5" || base.titulo.includes("B5") ? "Extra Administrativo" : base.titulo,
       observacoes: base.observacoes.replace(/B5/g, "Extra administrativo"),
+    };
+  }
+
+  if (base.tipo === "MG_ORDINARIO") {
+    const competenciaSobreaviso = getCompetencia(base.dataHoraInicio);
+    return {
+      ...base,
+      competenciaServico: competenciaSobreaviso,
+      competenciaImplantacao: competenciaSobreaviso,
     };
   }
 

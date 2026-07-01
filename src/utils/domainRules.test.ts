@@ -87,6 +87,17 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(launch.horasPagaveis).toBe(12);
   });
 
+  it("conta prontidao do primeiro dia do mes seguinte no mes do sobreaviso", () => {
+    const launch = createMgOrdinario("2026-07-01", valuesFor("2Âº SGT"), DEFAULT_FERIADOS, "MG", { pessoa: cristian });
+    const juneTotals = calculateMonthlyTotals(stateOf({ selectedMonth: "2026-06", lancamentos: [launch] }));
+    const julyTotals = calculateMonthlyTotals(stateOf({ selectedMonth: "2026-07", lancamentos: [launch] }));
+
+    expect(launch.dataHoraInicio).toBe("2026-06-30T18:00");
+    expect(launch.competenciaImplantacao).toBe("2026-06");
+    expect(juneTotals.ajudaCusto.horasTotal).toBe(12);
+    expect(julyTotals.ajudaCusto.horasTotal).toBe(0);
+  });
+
   it("MG Extra gera 24h pagaveis", () => {
     const launch = createMgExtra("2026-06-10", valuesFor("2º SGT"), DEFAULT_FERIADOS, "Extra", { pessoa: cristian });
     expect(launch.horasReais).toBe(24);
@@ -293,6 +304,22 @@ describe("regras de servico, cotas e conflitos", () => {
     expect(totals.ajudaCusto.horasTotal).toBe(24);
     expect(totals.ajudaCusto.horasMajoradas).toBe(0);
     expect(totals.ajudaCusto.valorTotal).toBe(launch.valorTotal);
+  });
+
+  it("salva observacao opcional em pendencia anterior", () => {
+    const pendencia = createPendenciaAnterior({
+      competenciaImplantacao: "2026-06",
+      mesOrigem: "05",
+      anoOrigem: "2026",
+      horas: 12,
+      tipo: "MAJORADO",
+      valores: valuesFor("2Ã‚Âº SGT"),
+      pessoa: cristian,
+      observacao: "Extra implantado parcialmente",
+    });
+
+    expect(pendencia.observacoes).toBe("Extra implantado parcialmente");
+    expect(pendencia.observacao).toBe("Extra implantado parcialmente");
   });
 
   it("calcula totais apenas pela data do servico no mes selecionado", () => {
