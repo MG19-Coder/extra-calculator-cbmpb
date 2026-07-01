@@ -27,6 +27,11 @@ function getOverlap(a: Lancamento, b: Lancamento): { inicio: Date; fim: Date; ho
 }
 
 function shouldIgnoreConflict(a: Lancamento, b: Lancamento): boolean {
+  const sameTypeAndPeriod = a.tipo === b.tipo
+    && a.dataHoraInicio === b.dataHoraInicio
+    && a.dataHoraFim === b.dataHoraFim;
+
+  if (sameTypeAndPeriod) return false;
   if (a.tipo === "MG_ORDINARIO" || b.tipo === "MG_ORDINARIO") return true;
 
   const hasClass = a.tipo === "HORA_AULA" || b.tipo === "HORA_AULA";
@@ -149,7 +154,7 @@ export function suggestFreeTimeWindows(params: {
   return suggestions;
 }
 
-export function markConflicts(lancamentos: Lancamento[], feriados: FeriadoEstadual[] = []): Lancamento[] {
+export function markConflicts(lancamentos: Lancamento[], feriados: FeriadoEstadual[] = [], includeSuggestions = false): Lancamento[] {
   const activeLaunches = lancamentos.filter((item) => item.status !== "CANCELADO");
 
   return lancamentos.map((item) => {
@@ -177,14 +182,16 @@ export function markConflicts(lancamentos: Lancamento[], feriados: FeriadoEstadu
           inicioConflito: toDateTimeInput(overlap.inicio),
           fimConflito: toDateTimeInput(overlap.fim),
           horasConflito: Number(overlap.horas.toFixed(2)),
-          sugestoes: suggestFreeTimeWindows({
-            dataInicial,
-            dataFinal,
-            quantidadeHorasNecessarias: overlap.horas,
-            agendaExistente: activeLaunches,
-            feriados,
-            pessoaId: item.pessoaId,
-          }),
+          sugestoes: includeSuggestions
+            ? suggestFreeTimeWindows({
+                dataInicial,
+                dataFinal,
+                quantidadeHorasNecessarias: overlap.horas,
+                agendaExistente: activeLaunches,
+                feriados,
+                pessoaId: item.pessoaId,
+              })
+            : [],
         };
       })
       .filter((detail): detail is NonNullable<typeof detail> => Boolean(detail));

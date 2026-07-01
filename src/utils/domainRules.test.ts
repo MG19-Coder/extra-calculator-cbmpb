@@ -210,7 +210,7 @@ describe("regras de servico, cotas e conflitos", () => {
       horasMajoradas: 12,
       horasPagaveis: 12,
     });
-    const marked = markConflicts([extra1, extra], DEFAULT_FERIADOS);
+    const marked = markConflicts([extra1, extra], DEFAULT_FERIADOS, true);
     const detail = marked[0].detalhesConflito?.[0];
 
     expect(detail?.inicioConflito).toBe("2026-06-27T18:00");

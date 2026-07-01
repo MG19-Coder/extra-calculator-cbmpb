@@ -691,7 +691,7 @@ export function CalendarMonth({
                   <div className="mt-3">
                     <p className="font-semibold">Sugestoes de realocacao:</p>
                     {summary.sugestoes.length === 0 ? (
-                      <p className="mt-1 text-red-800">Nenhum horario livre encontrado no mes atual ou seguinte.</p>
+                      <p className="mt-1 text-red-800">Use a secao "Horarios livres para implantacao" para calcular opcoes sem travar a abertura do calendario.</p>
                     ) : (
                       <ul className="mt-1 grid gap-1 text-red-900">
                         {groupSuggestionsByDay(summary.sugestoes).map((group) => (
