@@ -52,20 +52,20 @@ function App() {
   }[tab];
 
   return (
-    <div className="min-h-screen bg-[#f6f7f9]">
-      <header className="border-b border-slate-200 bg-ink text-white">
+    <div className="min-h-screen bg-slate-100">
+      <header className="border-b border-slate-800 bg-gradient-to-r from-ink to-slate-800 text-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-orange-200">Controle pessoal</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Controle pessoal</p>
             <h1 className="text-2xl font-bold">Controle de Extras BM</h1>
             <p className="mt-1 text-sm text-slate-300">{activePessoa?.nome ?? "Sem pessoa"} - {activePessoa?.graduacao ?? ""} · {getMonthName(state.selectedMonth)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select className="min-h-11 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white" value={state.activePessoaId} onChange={(event) => store.setActivePessoa(event.target.value)}>
+            <select className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white" value={state.activePessoaId} onChange={(event) => store.setActivePessoa(event.target.value)}>
               {state.pessoas.map((pessoa) => <option key={pessoa.id} value={pessoa.id} className="text-ink">{pessoa.nome}</option>)}
             </select>
-            <input className="min-h-11 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white" type="month" value={state.selectedMonth} onChange={(event) => store.setSelectedMonth(event.target.value)} />
-            <button className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-white/10 lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Abrir menu"><Menu size={20} /></button>
+            <input className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white" type="month" value={state.selectedMonth} onChange={(event) => store.setSelectedMonth(event.target.value)} />
+            <button className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Abrir menu"><Menu size={20} /></button>
           </div>
         </div>
       </header>
