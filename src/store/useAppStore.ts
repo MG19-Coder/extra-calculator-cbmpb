@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, Contracheque, FeriadoEstadual, Lancamento, Militar, Pessoa, ValoresConfig } from "../types";
 import { createDefaultState, DEFAULT_PESSOAS } from "./defaults";
 import { markConflicts } from "../utils/conflictUtils";
@@ -9,6 +9,8 @@ import { mergeImportedState, replaceWithImportedState } from "../utils/dataTrans
 import { recalculateHelpCostClassification } from "../utils/paymentBlocks";
 import { calculateHelpCostValue } from "../utils/paymentBlocks";
 import { payTableToValues } from "../utils/payTableUtils";
+import { loadCloudState, saveCloudState } from "../lib/cloudState";
+import { supabase } from "../lib/supabase";
 
 const STORAGE_KEY = "controle-extras-bm:v1";
 
@@ -60,6 +62,52 @@ function readState(): AppState {
 
 export function useAppStore() {
   const [state, setState] = useState<AppState>(() => readState());
+  const [cloudUserId, setCloudUserId] = useState<string | null>(null);
+  const cloudLoadedRef = useRef(!supabase);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    void supabase.auth.getUser().then(async ({ data, error }) => {
+      if (!active || error || !data.user) return;
+      setCloudUserId(data.user.id);
+      try {
+        const cloudState = await loadCloudState(data.user.id);
+        if (active && cloudState) {
+          const fallback = createDefaultState();
+          const merged = { ...fallback, ...cloudState } as AppState;
+          const pessoas = merged.pessoas?.length ? merged.pessoas : DEFAULT_PESSOAS;
+          setState({
+            ...merged,
+            pessoas,
+            activePessoaId: merged.activePessoaId || pessoas[0]?.id || "",
+            payTables: merged.payTables?.length ? merged.payTables : DEFAULT_PAY_TABLES,
+            lancamentos: syncLaunchValuesWithPeople(
+              normalizeLaunches(merged.lancamentos ?? [], pessoas[0]).map((item) => recalculateHelpCostClassification(item, merged.feriados ?? [])),
+              pessoas,
+              merged.payTables?.length ? merged.payTables : DEFAULT_PAY_TABLES,
+              merged.valores,
+            ),
+          });
+        }
+      } catch (cloudError) {
+        console.error("Não foi possível carregar os dados online.", cloudError);
+      } finally {
+        if (active) cloudLoadedRef.current = true;
+      }
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !cloudUserId || !cloudLoadedRef.current) return;
+    const timer = window.setTimeout(() => {
+      void saveCloudState(cloudUserId, state).catch((cloudError) => {
+        console.error("Não foi possível salvar os dados online.", cloudError);
+      });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [state, cloudUserId]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -205,4 +253,3 @@ export function useAppStore() {
     importScale,
   };
 }
-
