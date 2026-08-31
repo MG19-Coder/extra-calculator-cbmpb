@@ -6,8 +6,30 @@ import { mergeAutomaticHolidays } from "../utils/holidayUtils";
 import { normalizeLaunch, normalizeLaunches } from "../utils/launchCompatibility";
 import { DEFAULT_PAY_TABLES } from "../data/payTables";
 import { mergeImportedState, replaceWithImportedState } from "../utils/dataTransferUtils";
+import { recalculateHelpCostClassification } from "../utils/paymentBlocks";
+import { calculateHelpCostValue } from "../utils/paymentBlocks";
+import { payTableToValues } from "../utils/payTableUtils";
 
 const STORAGE_KEY = "controle-extras-bm:v1";
+
+function syncLaunchValuesWithPeople(lancamentos: Lancamento[], pessoas: Pessoa[], payTables: AppState["payTables"], limites: ValoresConfig): Lancamento[] {
+  return lancamentos.map((item) => {
+    if (item.tipo === "HORA_AULA") return item;
+    const pessoa = pessoas.find((candidate) => candidate.id === item.pessoaId);
+    const payTable = pessoa && payTables.find((candidate) => candidate.graduacao === pessoa.graduacao);
+    if (!pessoa || !payTable) return item;
+    const valores = payTableToValues(payTable, limites);
+    return {
+      ...item,
+      graduacaoUsada: pessoa.graduacao,
+      valorHoraNormal: valores.extraNormalHora,
+      valorHoraMajorada: valores.extraMajoradoHora,
+      valorHoraNormalUsado: valores.extraNormalHora,
+      valorHoraMajoradaUsado: valores.extraMajoradoHora,
+      valorTotal: calculateHelpCostValue(item.horasNormais ?? 0, item.horasMajoradas ?? 0, valores),
+    };
+  });
+}
 
 function readState(): AppState {
   const fallback = createDefaultState();
@@ -24,7 +46,12 @@ function readState(): AppState {
       activePessoaId,
       payTables: parsed.payTables?.length ? parsed.payTables : DEFAULT_PAY_TABLES,
       feriados: mergeAutomaticHolidays(parsed.feriados, [selectedYear - 1, selectedYear, selectedYear + 1]),
-      lancamentos: normalizeLaunches(parsed.lancamentos, pessoas[0]),
+      lancamentos: syncLaunchValuesWithPeople(
+        normalizeLaunches(parsed.lancamentos, pessoas[0]).map((item) => recalculateHelpCostClassification(item, parsed.feriados ?? [])),
+        pessoas,
+        parsed.payTables?.length ? parsed.payTables : DEFAULT_PAY_TABLES,
+        parsed.valores,
+      ),
     };
   } catch {
     return fallback;
@@ -58,10 +85,28 @@ export function useAppStore() {
       const exists = current.pessoas.some((item) => item.id === pessoa.id);
       const now = new Date().toISOString();
       const nextPessoa = { ...pessoa, updatedAt: now, createdAt: pessoa.createdAt || now };
+      const payTable = current.payTables.find((item) => item.graduacao === nextPessoa.graduacao);
+      const pessoaValores = payTable ? payTableToValues(payTable, current.valores) : current.valores;
+      const lancamentos = current.lancamentos.map((item) => {
+        if (item.pessoaId !== nextPessoa.id || item.tipo === "HORA_AULA") return item;
+        const horasNormais = item.horasNormais ?? 0;
+        const horasMajoradas = item.horasMajoradas ?? 0;
+        return {
+          ...item,
+          graduacaoUsada: nextPessoa.graduacao,
+          valorHoraNormal: pessoaValores.extraNormalHora,
+          valorHoraMajorada: pessoaValores.extraMajoradoHora,
+          valorHoraNormalUsado: pessoaValores.extraNormalHora,
+          valorHoraMajoradaUsado: pessoaValores.extraMajoradoHora,
+          valorTotal: calculateHelpCostValue(horasNormais, horasMajoradas, pessoaValores),
+          updatedAt: now,
+        };
+      });
       return {
         ...current,
         activePessoaId: current.activePessoaId || nextPessoa.id,
         pessoas: exists ? current.pessoas.map((item) => item.id === pessoa.id ? nextPessoa : item) : [...current.pessoas, nextPessoa],
+        lancamentos,
       };
     });
   }
@@ -160,3 +205,4 @@ export function useAppStore() {
     importScale,
   };
 }
+
