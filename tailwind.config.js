@@ -8,7 +8,7 @@ export default {
       },
       colors: {
         ink: "#172033",
-        rescue: "#b91c1c",
+        rescue: "#0e7490",
         ember: "#f97316",
         moss: "#166534",
         ocean: "#0369a1",
