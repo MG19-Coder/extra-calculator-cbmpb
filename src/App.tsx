@@ -13,6 +13,7 @@ import { People } from "./pages/People";
 import { useAppStore } from "./store/useAppStore";
 import { getMonthName } from "./utils/dateUtils";
 import { calculateMonthlyTotals } from "./utils/quotaUtils";
+import { AuthGate } from "./components/AuthGate";
 
 type Tab = "pessoas" | "dashboard" | "lancamentos" | "novo" | "escala" | "calendario" | "relatorio" | "contracheque" | "config" | "feriados";
 
@@ -29,7 +30,7 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
   { id: "feriados", label: "Feriados", icon: CalendarDays },
 ];
 
-function App() {
+function AppContent() {
   const store = useAppStore();
   const { state } = store;
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -91,6 +92,10 @@ function App() {
       </div>
     </div>
   );
+}
+
+function App() {
+  return <AuthGate><AppContent /></AuthGate>;
 }
 
 export default App;
