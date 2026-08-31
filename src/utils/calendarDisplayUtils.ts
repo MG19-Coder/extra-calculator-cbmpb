@@ -60,13 +60,13 @@ export function gerarPeriodosImplantaveis(item: Lancamento): PeriodoCalendario[]
   }
 
   if (["MG_EXTRA", "EXTRA_ADMINISTRATIVO", "EXTRA_B5"].includes(item.tipo) && isDefault24hOperationalPeriod(item)) {
-    if (item.tipo === "EXTRA_ADMINISTRATIVO") {
+    if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") {
       return [
         {
           id: `${item.id}:extra-24h`,
           lancamento: item,
           data: serviceDate,
-          titulo: "Extra Administrativo 24h",
+          titulo: "Extra Administrativo",
           horas: 24,
           exibirHoras: true,
           horarioInicio: "18:00",
