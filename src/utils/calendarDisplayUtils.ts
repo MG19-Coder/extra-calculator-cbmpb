@@ -132,4 +132,3 @@ export function gerarPeriodosImplantaveis(item: Lancamento): PeriodoCalendario[]
     },
   ];
 }
-
