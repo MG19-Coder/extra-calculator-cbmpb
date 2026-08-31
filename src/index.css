@@ -4,7 +4,7 @@
 
 :root {
   color: #172033;
-  background: #f6f7f9;
+  background: #f1f5f9;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,6 +19,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: #f1f5f9;
 }
 
 button,
@@ -32,6 +33,18 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(3, 105, 161, 0.28);
+  outline: 3px solid rgba(14, 116, 144, 0.28);
   outline-offset: 2px;
+}
+
+button,
+select,
+input,
+textarea {
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
