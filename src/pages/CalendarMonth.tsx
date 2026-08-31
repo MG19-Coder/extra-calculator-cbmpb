@@ -33,6 +33,7 @@ function getPeriodStyle(period: PeriodoCalendario, feriados: FeriadoEstadual[]):
   const item = period.lancamento;
   if (item.possuiConflito) return "bg-red-100 text-red-800 ring-1 ring-red-200";
   if (item.tipo === "HORA_AULA") return "bg-violet-50 text-violet-800 ring-1 ring-violet-200";
+  if (item.tipo === "MG_ORDINARIO" && period.titulo === "Prontidao") return "bg-slate-50 text-slate-600 ring-1 ring-slate-200";
   if (item.tipo === "EXTRA_ADMINISTRATIVO" || item.tipo === "EXTRA_B5") return "bg-cyan-50 text-cyan-900 ring-1 ring-cyan-300";
   if (isPaidExtraPeriod(period) && isWeekendOrHoliday(period.data, feriados)) return "bg-orange-50 text-orange-900 ring-1 ring-orange-300";
   return "bg-slate-100 text-slate-700 ring-1 ring-slate-300";
