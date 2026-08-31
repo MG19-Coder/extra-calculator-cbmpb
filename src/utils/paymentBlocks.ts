@@ -1,4 +1,4 @@
-import type { FeriadoEstadual, PaymentBlock, ValoresConfig } from "../types";
+import type { FeriadoEstadual, Lancamento, PaymentBlock, ValoresConfig } from "../types";
 import { addDays, calculateRealHours, parseLocalDate, toDateInput, toDateTimeInput } from "./dateUtils";
 import { mergeAutomaticHolidays } from "./holidayUtils";
 
@@ -67,6 +67,50 @@ export function calculateClassifiedHours(blocks: PaymentBlock[]): { horasNormais
   return { horasNormais, horasMajoradas, categoria };
 }
 
+/**
+ * Recalcula a classificaÃ§Ã£o dos lanÃ§amentos gerados antes da regra atual de
+ * sexta-feira, fim de semana e feriado. Isso evita que o localStorage deixe
+ * o dashboard e o calendÃ¡rio com horas majoradas antigas.
+ */
+export function recalculateHelpCostClassification(item: Lancamento, feriados: FeriadoEstadual[]): Lancamento {
+  const isGeneratedHelpCost = item.tipo === "MG_ORDINARIO"
+    || item.tipo === "MG_EXTRA"
+    || (item.tipo === "EXTRA_ADMINISTRATIVO" && item.horasPagaveis >= 24 && item.dataHoraInicio.slice(11, 16) === "18:00" && item.dataHoraFim.slice(11, 16) === "18:00");
+
+  if (!isGeneratedHelpCost) return item;
+
+  const blocks = generateHelpCostBlocks(item.dataReferenciaServico, item.tipo === "MG_ORDINARIO" ? "MG_ORDINARIO" : item.tipo === "MG_EXTRA" ? "MG_EXTRA" : "EXTRA_ADMINISTRATIVO", feriados);
+  const classified = calculateClassifiedHours(blocks);
+  const valorTotal = calculateHelpCostValue(
+    classified.horasNormais,
+    classified.horasMajoradas,
+    {
+      extraNormalHora: item.valorHoraNormalUsado ?? item.valorHoraNormal,
+      extraNormal12h: 0,
+      extraNormal24h: 0,
+      extraMajoradoHora: item.valorHoraMajoradaUsado ?? item.valorHoraMajorada,
+      extraMajorado12h: 0,
+      extraMajorado24h: 0,
+      horaAulaCFSD: 0,
+      horaAulaCFS: 0,
+      horaAulaCFO: 0,
+      horaAulaOutra: 0,
+      limiteMensalAjudaCusto: 0,
+      limiteMensalHoraAula: 0,
+    },
+  );
+
+  return {
+    ...item,
+    categoriaPagamento: classified.categoria,
+    horasNormais: classified.horasNormais,
+    horasMajoradas: classified.horasMajoradas,
+    valorTotal,
+    observacoes: blocks.map((block) => `${block.dataReferencia}: ${block.classificacao.toLowerCase()} (${block.motivo})`).join("; "),
+    observacao: blocks.map((block) => `${block.dataReferencia}: ${block.classificacao.toLowerCase()} (${block.motivo})`).join("; "),
+  };
+}
+
 export function calculateClassHours(inicio: string, fim: string): number {
   return calculateRealHours(inicio, fim);
 }
@@ -74,3 +118,4 @@ export function calculateClassHours(inicio: string, fim: string): number {
 export function calculateClassValue(horas: number, valorHora: number): number {
   return Number((horas * valorHora).toFixed(2));
 }
+
