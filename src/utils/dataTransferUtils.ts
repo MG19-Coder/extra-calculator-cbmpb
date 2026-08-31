@@ -1,6 +1,7 @@
 import type { AppState, Contracheque, FeriadoEstadual, Lancamento, PayTable, Pessoa } from "../types";
 import { mergeAutomaticHolidays } from "./holidayUtils";
 import { normalizeLaunches } from "./launchCompatibility";
+import { recalculateHelpCostClassification } from "./paymentBlocks";
 
 export const EXPORT_VERSION = "1.0";
 
@@ -84,7 +85,7 @@ export function parseImportedScale(raw: string): AppState {
     pessoas,
     activePessoaId: state.activePessoaId || pessoas[0]?.id || "",
     feriados: mergeAutomaticHolidays(state.feriados, [selectedYear - 1, selectedYear, selectedYear + 1]),
-    lancamentos: normalizeLaunches(state.lancamentos, pessoas[0]),
+    lancamentos: normalizeLaunches(state.lancamentos, pessoas[0]).map((item) => recalculateHelpCostClassification(item, state.feriados)),
     contracheques: state.contracheques ?? [],
     payTables: state.payTables ?? [],
   };
@@ -159,3 +160,4 @@ export function replaceWithImportedState(imported: AppState): ImportResult {
     skippedDuplicates: 0,
   };
 }
+
