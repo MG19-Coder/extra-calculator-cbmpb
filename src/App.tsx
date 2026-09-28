@@ -13,7 +13,6 @@ import { People } from "./pages/People";
 import { useAppStore } from "./store/useAppStore";
 import { getMonthName } from "./utils/dateUtils";
 import { calculateMonthlyTotals } from "./utils/quotaUtils";
-import { AuthGate } from "./components/AuthGate";
 
 type Tab = "pessoas" | "dashboard" | "lancamentos" | "novo" | "escala" | "calendario" | "relatorio" | "contracheque" | "config" | "feriados";
 
@@ -95,7 +94,7 @@ function AppContent() {
 }
 
 function App() {
-  return <AuthGate><AppContent /></AuthGate>;
+  return <AppContent />;
 }
 
 export default App;
