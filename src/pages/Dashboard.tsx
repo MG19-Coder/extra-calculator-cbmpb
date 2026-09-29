@@ -1,7 +1,8 @@
 import { AlertTriangle, CheckCircle2, Clock, DollarSign } from "lucide-react";
 import type { AppState, MonthlyTotals } from "../types";
-import { formatCurrency } from "../utils/dateUtils";
+import { formatCurrency, formatDate, getCompetencia } from "../utils/dateUtils";
 import { Section, Stat } from "../components/ui";
+import { getHoraAulaSubtipo } from "../utils/launchCompatibility";
 
 function ValueLine({ label, hours, value, tone }: { label: string; hours: number; value: number; tone: "normal" | "majorado" | "total" }) {
   const toneClass = {
@@ -22,6 +23,10 @@ function ValueLine({ label, hours, value, tone }: { label: string; hours: number
 }
 
 export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyTotals }) {
+  const aulasDoMes = state.lancamentos
+    .filter((item) => item.tipo === "HORA_AULA" && item.status !== "CANCELADO" && item.pessoaId === state.activePessoaId && getCompetencia(item.dataHoraInicio) === state.selectedMonth)
+    .sort((a, b) => a.dataHoraInicio.localeCompare(b.dataHoraInicio));
+
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -64,6 +69,20 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
             <Stat label="Horas lancadas" value={`${totals.horaAula.horasTotal}h`} tone={totals.horaAula.excedeuTeto ? "danger" : "neutral"} />
             <Stat label="Horas restantes" value={`${totals.horaAula.horasRestantes}h`} />
             <Stat label="Valor previsto" value={formatCurrency(totals.horaAula.valorTotal)} tone="good" />
+          </div>
+          <div className="mt-4 rounded-lg border border-slate-200 bg-white px-3">
+            <p className="border-b border-slate-200 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Lançamentos por aula</p>
+            {aulasDoMes.length === 0 ? (
+              <p className="py-3 text-sm text-slate-500">Nenhuma hora-aula lançada neste mês.</p>
+            ) : aulasDoMes.map((aula) => (
+              <div key={aula.id} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-b-0">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-700">{getHoraAulaSubtipo(aula)}</p>
+                  <p className="truncate text-xs text-slate-500">{aula.disciplina || aula.observacoes}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-bold tabular-nums text-slate-700">{aula.horasAula}h</span>
+              </div>
+            ))}
           </div>
           {totals.horaAula.excedeuTeto && (
             <p className="mt-4 flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm font-medium text-red-800">
