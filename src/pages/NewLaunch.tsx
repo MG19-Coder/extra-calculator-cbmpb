@@ -4,7 +4,7 @@ import type { AppState, Lancamento, SubtipoHoraAula } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
 import { getActivePessoa, getPayTableForGraduacao, payTableToValues } from "../utils/payTableUtils";
-import { formatLongDayMonth } from "../utils/dateUtils";
+import { formatLongDayMonth, parseLocalDate, toDateTimeInput } from "../utils/dateUtils";
 
 export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: Lancamento[]) => void }) {
   const pessoa = getActivePessoa(state.pessoas, state.activePessoaId);
@@ -13,8 +13,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
   const [preset, setPreset] = useState("MG_ORDINARIO");
   const [serviceDate, setServiceDate] = useState(`${state.selectedMonth}-10`);
   const [aulaDate, setAulaDate] = useState(`${state.selectedMonth}-10`);
-  const [horaInicioAula, setHoraInicioAula] = useState("00:00");
-  const [horaFimAula, setHoraFimAula] = useState("15:00");
+  const [horasAula, setHorasAula] = useState(15);
   const [competenciaImplantacaoAula, setCompetenciaImplantacaoAula] = useState(state.selectedMonth);
   const [subtipoHoraAula, setSubtipoHoraAula] = useState<SubtipoHoraAula>("CFS");
   const [disciplina, setDisciplina] = useState("Instrucao");
@@ -58,8 +57,11 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
     } else if (preset === "PENDENCIA_ANTERIOR") {
       item = createPendenciaAnterior({ competenciaImplantacao: state.selectedMonth, mesOrigem: origemMes, anoOrigem: origemAno, horas: horasPagaveis, tipo: horasMajoradas > 0 ? "MAJORADO" : "NORMAL", valores, pessoa, observacao: observacaoPendencia });
     } else {
-      const inicio = `${aulaDate}T${horaInicioAula}`;
-      const fim = `${aulaDate}T${horaFimAula}`;
+      const inicioDate = parseLocalDate(aulaDate);
+      const fimDate = new Date(inicioDate);
+      fimDate.setMinutes(fimDate.getMinutes() + Math.round(horasAula * 60));
+      const inicio = toDateTimeInput(inicioDate);
+      const fim = toDateTimeInput(fimDate);
       item = createHoraAula({ inicio, fim, subtipo: subtipoHoraAula, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores, pessoa });
     }
     onAdd([item]);
@@ -94,8 +96,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Dia da aula"><input ref={aulaDateRef} className={inputClass} type="date" value={aulaDate} onChange={(event) => setAulaDate(event.target.value)} /></Field>
             <Field label="Competencia de implantacao"><input className={inputClass} type="month" value={competenciaImplantacaoAula} onChange={(event) => setCompetenciaImplantacaoAula(event.target.value)} /></Field>
-            <Field label="Inicio da aula"><input className={inputClass} type="time" value={horaInicioAula} onChange={(event) => setHoraInicioAula(event.target.value)} /></Field>
-            <Field label="Fim da aula"><input className={inputClass} type="time" value={horaFimAula} onChange={(event) => setHoraFimAula(event.target.value)} /></Field>
+            <Field label="Quantidade de horas"><input className={inputClass} type="number" min="0.5" step="0.5" value={horasAula} onChange={(event) => setHorasAula(Number(event.target.value))} /></Field>
             <Field label="Curso/tipo de aula">
               <select className={inputClass} value={subtipoHoraAula} onChange={(event) => setSubtipoHoraAula(event.target.value as SubtipoHoraAula)}>
                 <option value="CFSD">CFSD</option>

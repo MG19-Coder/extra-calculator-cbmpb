@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ConflictSummary, FeriadoEstadual, FreeTimeSuggestion, Lancamento, Pessoa } from "../types";
-import { formatCurrency, formatDate, formatDateTime, listMonthCalendarCells, listMonthDays, toDateInput, toDateTimeInput } from "../utils/dateUtils";
+import { formatCurrency, formatDate, formatDateTime, listMonthCalendarCells, listMonthDays, parseLocalDate, toDateInput, toDateTimeInput } from "../utils/dateUtils";
 import { Field, inputClass, primaryButton, secondaryButton, Section } from "../components/ui";
 import { findHolidayForDate } from "../utils/holidayUtils";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
@@ -139,7 +139,14 @@ function summaryTitle(summary: ConflictSummary): string {
   return `${left} x ${right}`;
 }
 
-function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, endTime: string, valores: ValoresConfig, feriados: FeriadoEstadual[]): Lancamento {
+function classTimes(date: string, hours: number): { inicio: string; fim: string } {
+  const inicioDate = parseLocalDate(date);
+  const fimDate = new Date(inicioDate);
+  fimDate.setMinutes(fimDate.getMinutes() + Math.round(hours * 60));
+  return { inicio: toDateTimeInput(inicioDate), fim: toDateTimeInput(fimDate) };
+}
+
+function buildUpdatedLaunch(item: Lancamento, date: string, classHours: number, valores: ValoresConfig, feriados: FeriadoEstadual[]): Lancamento {
   let updated: Lancamento;
   const valoresUsados: ValoresConfig = {
     ...valores,
@@ -169,9 +176,10 @@ function buildUpdatedLaunch(item: Lancamento, date: string, startTime: string, e
       pessoa,
     });
   } else {
+    const times = classTimes(date, classHours);
     updated = createHoraAula({
-      inicio: `${date}T${startTime}`,
-      fim: `${date}T${endTime}`,
+      inicio: times.inicio,
+      fim: times.fim,
       subtipo: getHoraAulaSubtipo(item),
       disciplina: item.disciplina ?? item.observacoes,
       competenciaImplantacao: item.competenciaImplantacao,
@@ -224,8 +232,7 @@ export function CalendarMonth({
   const conflictSummaries = getConflictSummaries(calendarItems.filter((item) => item.competenciaImplantacao === competencia || item.competenciaServico === competencia));
   const [editing, setEditing] = useState<Lancamento | null>(null);
   const [editDate, setEditDate] = useState("");
-  const [editStart, setEditStart] = useState("00:00");
-  const [editEnd, setEditEnd] = useState("15:00");
+  const [editClassHours, setEditClassHours] = useState(15);
   const [editSubtipo, setEditSubtipo] = useState<SubtipoHoraAula>("CFS");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
   const [freePlans, setFreePlans] = useState<SuggestionPlan[]>([]);
@@ -236,8 +243,7 @@ export function CalendarMonth({
   const [desiredClassType, setDesiredClassType] = useState<SubtipoHoraAula>("CFS");
   const [creatingDate, setCreatingDate] = useState("");
   const [newPreset, setNewPreset] = useState<NewCalendarPreset>("MG_ORDINARIO");
-  const [newStart, setNewStart] = useState("00:00");
-  const [newEnd, setNewEnd] = useState("15:00");
+  const [newClassHours, setNewClassHours] = useState(15);
   const [newClassType, setNewClassType] = useState<SubtipoHoraAula>("CFS");
   const [newDiscipline, setNewDiscipline] = useState("Instrucao");
   const [newPendencyMonth, setNewPendencyMonth] = useState(competencia.slice(5, 7));
@@ -257,8 +263,7 @@ export function CalendarMonth({
   useEffect(() => {
     if (!editing) return;
     setEditDate(getCalendarDate(editing));
-    setEditStart(editing.dataHoraInicio.slice(11, 16));
-    setEditEnd(editing.dataHoraFim.slice(11, 16));
+    setEditClassHours(editing.horasAula || 0);
     setEditSubtipo(getHoraAulaSubtipo(editing));
   }, [editing]);
 
@@ -280,7 +285,7 @@ export function CalendarMonth({
   function saveEditing() {
     if (!editing) return;
     const itemToSave = editing.tipo === "HORA_AULA" ? { ...editing, subtipoHoraAula: editSubtipo, curso: editSubtipo } : editing;
-    onUpdate(buildUpdatedLaunch(itemToSave, editDate, editStart, editEnd, valores, feriados));
+    onUpdate(buildUpdatedLaunch(itemToSave, editDate, editClassHours, valores, feriados));
     setEditing(null);
   }
 
@@ -315,9 +320,10 @@ export function CalendarMonth({
         observacao: newPendencyObservation,
       });
     } else {
+      const times = classTimes(creatingDate, newClassHours);
       item = createHoraAula({
-        inicio: `${creatingDate}T${newStart}`,
-        fim: `${creatingDate}T${newEnd}`,
+        inicio: times.inicio,
+        fim: times.fim,
         subtipo: newClassType,
         disciplina: newDiscipline,
         competenciaImplantacao: competencia,
@@ -493,12 +499,7 @@ export function CalendarMonth({
               <Field label={editing.tipo === "HORA_AULA" ? "Dia da aula" : "Dia do servico/prontidao"}>
                 <input ref={editDateRef} className={inputClass} type="date" value={editDate} onChange={(event) => setEditDate(event.target.value)} />
               </Field>
-              <Field label="Inicio">
-                <input className={inputClass} type="time" value={editStart} onChange={(event) => setEditStart(event.target.value)} disabled={editing.tipo !== "HORA_AULA"} />
-              </Field>
-              <Field label="Fim">
-                <input className={inputClass} type="time" value={editEnd} onChange={(event) => setEditEnd(event.target.value)} disabled={editing.tipo !== "HORA_AULA"} />
-              </Field>
+              {editing.tipo === "HORA_AULA" && <Field label="Quantidade de horas"><input className={inputClass} type="number" min="0.5" step="0.5" value={editClassHours} onChange={(event) => setEditClassHours(Number(event.target.value))} /></Field>}
               {editing.tipo === "HORA_AULA" && (
                 <Field label="Curso/tipo de aula">
                   <select className={inputClass} value={editSubtipo} onChange={(event) => setEditSubtipo(event.target.value as SubtipoHoraAula)}>
@@ -547,8 +548,7 @@ export function CalendarMonth({
 
               {newPreset === "HORA_AULA" && (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Inicio"><input className={inputClass} type="time" value={newStart} onChange={(event) => setNewStart(event.target.value)} /></Field>
-                  <Field label="Fim"><input className={inputClass} type="time" value={newEnd} onChange={(event) => setNewEnd(event.target.value)} /></Field>
+                  <Field label="Quantidade de horas"><input className={inputClass} type="number" min="0.5" step="0.5" value={newClassHours} onChange={(event) => setNewClassHours(Number(event.target.value))} /></Field>
                   <Field label="Curso/tipo de aula">
                     <select className={inputClass} value={newClassType} onChange={(event) => setNewClassType(event.target.value as SubtipoHoraAula)}>
                       <option value="CFSD">CFSD</option>
