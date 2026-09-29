@@ -4,6 +4,7 @@ import type { AppState, Lancamento, SubtipoHoraAula } from "../types";
 import { Field, inputClass, primaryButton, Section } from "../components/ui";
 import { createExtraB5, createHoraAula, createMgExtra, createMgOrdinario, createPendenciaAnterior } from "../utils/launchFactory";
 import { getActivePessoa, getPayTableForGraduacao, payTableToValues } from "../utils/payTableUtils";
+import { formatLongDayMonth } from "../utils/dateUtils";
 
 export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: Lancamento[]) => void }) {
   const pessoa = getActivePessoa(state.pessoas, state.activePessoaId);
@@ -62,7 +63,7 @@ export function NewLaunch({ state, onAdd }: { state: AppState; onAdd: (items: La
       item = createHoraAula({ inicio, fim, subtipo: subtipoHoraAula, disciplina, competenciaImplantacao: competenciaImplantacaoAula, valores, pessoa });
     }
     onAdd([item]);
-    setNotice(`${item.titulo} lancado com sucesso. ${item.horasPagaveis}h registradas para ${item.competenciaImplantacao}.`);
+    setNotice(`${item.titulo} lançado com sucesso. Você adicionou no dia ${formatLongDayMonth(item.dataReferenciaServico)}. ${item.horasPagaveis}h registradas para ${item.competenciaImplantacao}.`);
   }
 
   const isAula = preset === "HORA_AULA";
