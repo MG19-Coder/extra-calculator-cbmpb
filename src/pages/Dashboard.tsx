@@ -31,8 +31,12 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
         <Stat label="Diferenca" value={formatCurrency(totals.diferenca.total)} tone={totals.diferenca.total === 0 ? "neutral" : "warn"} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Section title="Ajuda de custo">
+      <Section title="Detalhes do mês">
+        <div className="grid gap-3 xl:grid-cols-2">
+        <details className="group rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <summary className="cursor-pointer list-none font-semibold text-ink marker:hidden">
+            <span className="flex items-center justify-between gap-3">Ajuda de custo <span className="text-sm font-normal text-slate-500">{totals.ajudaCusto.horasTotal}h · {formatCurrency(totals.ajudaCusto.valorImplantavel)}</span></span>
+          </summary>
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="Cota mensal" value={`${state.valores.limiteMensalAjudaCusto}h`} />
             <Stat label="Horas lancadas" value={`${totals.ajudaCusto.horasTotal}h`} />
@@ -49,9 +53,12 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
             <ValueLine label="Excedente fora da cota" hours={totals.ajudaCusto.horasExcedentes} value={totals.ajudaCusto.valorExcedente} tone="majorado" />
           </div>
           <p className="mt-4 flex items-center gap-2 text-lg font-semibold text-ink"><DollarSign size={20} /> Total pagavel ajuda de custo: {formatCurrency(totals.ajudaCusto.valorImplantavel)}</p>
-        </Section>
+        </details>
 
-        <Section title="Hora-aula">
+        <details className="group rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <summary className="cursor-pointer list-none font-semibold text-ink marker:hidden">
+            <span className="flex items-center justify-between gap-3">Hora-aula <span className="text-sm font-normal text-slate-500">{totals.horaAula.horasTotal}h · {formatCurrency(totals.horaAula.valorTotal)}</span></span>
+          </summary>
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="Teto mensal" value={`${state.valores.limiteMensalHoraAula}h`} />
             <Stat label="Horas lancadas" value={`${totals.horaAula.horasTotal}h`} tone={totals.horaAula.excedeuTeto ? "danger" : "neutral"} />
@@ -63,16 +70,19 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
               <AlertTriangle size={18} /> Limite mensal de 40h de hora-aula ultrapassado.
             </p>
           )}
-        </Section>
-      </div>
-
-      <Section title="Alertas do mes">
-        <div className="grid gap-3 lg:grid-cols-3">
-          <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><Clock size={18} /> {totals.pendencias.length} pendencia(s) de meses anteriores.</p>
-          <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><CheckCircle2 size={18} /> Horas implantadas: {totals.implantadoHoras.total ? `${totals.implantadoHoras.total}h registradas` : "pendente"}.</p>
-          <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><AlertTriangle size={18} /> {totals.conflitos.length} conflito(s) encontrados.</p>
+        </details>
         </div>
       </Section>
+
+      {(totals.pendencias.length > 0 || totals.conflitos.length > 0 || totals.implantadoHoras.total === 0) && (
+        <Section title="Atenção">
+          <div className="grid gap-3 lg:grid-cols-3">
+            {totals.pendencias.length > 0 && <p className="flex items-center gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900"><Clock size={18} /> {totals.pendencias.length} pendência(s) de meses anteriores.</p>}
+            {totals.implantadoHoras.total === 0 && <p className="flex items-center gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700"><CheckCircle2 size={18} /> Nenhuma hora implantada neste mês.</p>}
+            {totals.conflitos.length > 0 && <p className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-800"><AlertTriangle size={18} /> {totals.conflitos.length} conflito(s) encontrados.</p>}
+          </div>
+        </Section>
+      )}
     </div>
   );
 }
