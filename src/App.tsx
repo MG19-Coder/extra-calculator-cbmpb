@@ -52,12 +52,12 @@ function AppContent() {
   }[tab];
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="shark-shell min-h-screen">
       <header className="border-b border-slate-800 bg-gradient-to-r from-ink to-slate-800 text-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Controle pessoal</p>
-            <h1 className="text-2xl font-bold">Controle de Extras BM</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Painel operacional</p>
+            <h1 className="text-2xl font-bold">Calculadora de Extras CBMPB</h1>
             <p className="mt-1 text-sm text-slate-300">{activePessoa?.nome ?? "Sem pessoa"} - {activePessoa?.graduacao ?? ""} · {getMonthName(state.selectedMonth)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

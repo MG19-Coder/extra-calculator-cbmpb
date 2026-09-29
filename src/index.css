@@ -19,7 +19,92 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f1f5f9;
+  background: #04121f;
+}
+
+.shark-shell {
+  color: #dbeafe;
+  background:
+    linear-gradient(180deg, rgba(3, 18, 31, 0.72), rgba(3, 18, 31, 0.94)),
+    url("/assets/underwater-shark-bg.png") center top / cover fixed;
+}
+
+.shark-shell > header {
+  border-color: rgba(91, 200, 235, 0.24) !important;
+  background: rgba(3, 14, 25, 0.9) !important;
+  backdrop-filter: blur(14px);
+}
+
+.shark-shell nav,
+.shark-shell section {
+  border-color: rgba(91, 200, 235, 0.28) !important;
+  background: rgba(5, 27, 42, 0.88) !important;
+  box-shadow: 0 16px 45px rgba(0, 8, 18, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.shark-shell nav button {
+  color: #b9d4e7;
+}
+
+.shark-shell nav button:hover {
+  background: rgba(54, 197, 240, 0.12) !important;
+  color: #e7f7ff;
+}
+
+.shark-shell nav button.bg-rescue {
+  background: #159ac2 !important;
+  color: #031522 !important;
+  box-shadow: 0 0 22px rgba(54, 197, 240, 0.28);
+}
+
+.shark-shell .bg-white,
+.shark-shell .bg-slate-50 {
+  background-color: rgba(7, 35, 52, 0.78) !important;
+}
+
+.shark-shell .border-slate-200,
+.shark-shell .border-slate-300,
+.shark-shell .border-slate-100 {
+  border-color: rgba(91, 200, 235, 0.26) !important;
+}
+
+.shark-shell .text-ink,
+.shark-shell .text-slate-700,
+.shark-shell .text-slate-600,
+.shark-shell .text-slate-500 {
+  color: #c6deed !important;
+}
+
+.shark-shell input,
+.shark-shell select,
+.shark-shell textarea {
+  border-color: rgba(91, 200, 235, 0.42) !important;
+  background-color: rgba(2, 18, 30, 0.82) !important;
+  color: #e4f4ff !important;
+}
+
+.shark-shell input::placeholder,
+.shark-shell textarea::placeholder {
+  color: #7895a8;
+}
+
+.shark-shell .bg-emerald-50,
+.shark-shell .bg-amber-50,
+.shark-shell .bg-red-50 {
+  background-color: rgba(8, 42, 55, 0.84) !important;
+}
+
+.shark-shell .text-emerald-900,
+.shark-shell .text-amber-900,
+.shark-shell .text-red-800,
+.shark-shell .text-red-900 {
+  color: #b9e9f8 !important;
+}
+
+.shark-shell .bg-slate-100 {
+  background-color: rgba(54, 197, 240, 0.14) !important;
+  color: #d9f5ff !important;
 }
 
 button,
