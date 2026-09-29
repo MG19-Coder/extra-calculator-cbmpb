@@ -20,7 +20,7 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
 
       <Section title="Detalhes do mês">
         <div className="grid gap-3 xl:grid-cols-2">
-        <details className="group rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <details className="group rounded-lg border border-slate-200 bg-slate-50 p-3" open>
           <summary className="cursor-pointer list-none font-semibold text-ink marker:hidden">
             <span className="flex items-center justify-between gap-3">Ajuda de custo <span className="text-sm font-normal text-slate-500">{totals.ajudaCusto.horasTotal}h · {formatCurrency(totals.ajudaCusto.valorImplantavel)}</span></span>
           </summary>
@@ -33,7 +33,7 @@ export function Dashboard({ state, totals }: { state: AppState; totals: MonthlyT
           </div>
         </details>
 
-        <details className="group rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <details className="group rounded-lg border border-slate-200 bg-slate-50 p-3" open>
           <summary className="cursor-pointer list-none font-semibold text-ink marker:hidden">
             <span className="flex items-center justify-between gap-3">Hora-aula <span className="text-sm font-normal text-slate-500">{totals.horaAula.horasTotal}h · {formatCurrency(totals.horaAula.valorTotal)}</span></span>
           </summary>
