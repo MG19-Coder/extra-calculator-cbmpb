@@ -10,6 +10,25 @@ const LAST_EXPORT_KEY = "controle-extras-bm:last-export";
 const LAST_IMPORT_KEY = "controle-extras-bm:last-import";
 const IMPORT_BACKUP_KEY = "controle-extras-bm:backup-before-import";
 
+export type AppTheme = "claro" | "escuro" | "alto-contraste";
+
+function ThemeSettings({ theme, onChange }: { theme: AppTheme; onChange: (theme: AppTheme) => void }) {
+  return (
+    <Section title="Aparência">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Tema do aplicativo">
+          <select className={inputClass} value={theme} onChange={(event) => onChange(event.target.value as AppTheme)}>
+            <option value="claro">Claro</option>
+            <option value="escuro">Escuro</option>
+            <option value="alto-contraste">Alto contraste</option>
+          </select>
+        </Field>
+        <p className="self-end pb-2 text-sm text-slate-600">O tema fica salvo neste navegador e pode ser alterado quando quiser.</p>
+      </div>
+    </Section>
+  );
+}
+
 function downloadJson(fileName: string, payload: unknown) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -192,15 +211,20 @@ export function SettingsPage({
   state,
   onValues,
   onImport,
+  theme,
+  onThemeChange,
   showDataManagement = true,
 }: {
   state: AppState;
   onValues: (values: ValoresConfig) => void;
   onImport: (state: AppState, mode: "replace" | "merge") => { importedLaunches: number; skippedDuplicates: number };
+  theme: AppTheme;
+  onThemeChange: (theme: AppTheme) => void;
   showDataManagement?: boolean;
 }) {
   return (
     <div className="grid gap-4">
+      <ThemeSettings theme={theme} onChange={onThemeChange} />
       {showDataManagement && <DataManagement state={state} onImport={onImport} />}
       <ValueSettings valores={state.valores} onSave={onValues} />
       <PayTablesView state={state} />
