@@ -7,7 +7,7 @@ import { ScaleGenerator } from "./pages/ScaleGenerator";
 import { CalendarMonth } from "./pages/CalendarMonth";
 import { Report } from "./pages/Report";
 import { Paycheck } from "./pages/Paycheck";
-import { DataManagement, SettingsPage } from "./pages/Settings";
+import { DataManagement, SettingsPage, type AppTheme } from "./pages/Settings";
 import { Holidays } from "./pages/Holidays";
 import { People } from "./pages/People";
 import { useAppStore } from "./store/useAppStore";
@@ -15,6 +15,16 @@ import { getMonthName } from "./utils/dateUtils";
 import { calculateMonthlyTotals } from "./utils/quotaUtils";
 
 type Tab = "pessoas" | "dashboard" | "lancamentos" | "novo" | "escala" | "calendario" | "relatorio" | "contracheque" | "config" | "feriados";
+const THEME_KEY = "controle-extras-bm:theme";
+
+function readTheme(): AppTheme {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === "escuro" || saved === "alto-contraste" ? saved : "claro";
+  } catch {
+    return "claro";
+  }
+}
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof BarChart3 }> = [
   { id: "pessoas", label: "Pessoas", icon: Users },
@@ -34,6 +44,7 @@ function AppContent() {
   const { state } = store;
   const [tab, setTab] = useState<Tab>("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<AppTheme>(readTheme);
   const totals = useMemo(() => calculateMonthlyTotals(state), [state]);
   const activePessoa = state.pessoas.find((item) => item.id === state.activePessoaId) ?? state.pessoas[0];
   const monthItems = state.lancamentos.filter((item) => (item.competenciaImplantacao === state.selectedMonth || item.competenciaServico === state.selectedMonth) && item.pessoaId === state.activePessoaId);
@@ -47,17 +58,17 @@ function AppContent() {
     calendario: <CalendarMonth competencia={state.selectedMonth} items={state.lancamentos} feriados={state.feriados} valores={state.valores} activePessoaId={state.activePessoaId} activePessoa={activePessoa} onUpdate={store.updateLaunch} onAdd={store.addLaunches} />,
     relatorio: <Report state={state} totals={totals} />,
     contracheque: <Paycheck state={state} totals={totals} onSave={store.upsertPaycheck} />,
-    config: <SettingsPage state={state} onValues={store.updateValues} onImport={store.importScale} showDataManagement={false} />,
+    config: <SettingsPage state={state} onValues={store.updateValues} onImport={store.importScale} theme={theme} onThemeChange={setAppTheme} showDataManagement={false} />,
     feriados: <Holidays feriados={state.feriados} onSave={store.upsertHoliday} onRemove={store.removeHoliday} />,
   }[tab];
 
   return (
-    <div className="shark-shell min-h-screen">
+    <div className="min-h-screen bg-slate-100" data-theme={theme}>
       <header className="border-b border-slate-800 bg-gradient-to-r from-ink to-slate-800 text-white shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Painel operacional</p>
-            <h1 className="text-2xl font-bold">Calculadora de Extras CBMPB</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Controle pessoal</p>
+            <h1 className="text-2xl font-bold">Controle de Extras BM</h1>
             <p className="mt-1 text-sm text-slate-300">{activePessoa?.nome ?? "Sem pessoa"} - {activePessoa?.graduacao ?? ""} · {getMonthName(state.selectedMonth)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -91,6 +102,15 @@ function AppContent() {
       </div>
     </div>
   );
+
+  function setAppTheme(nextTheme: AppTheme) {
+    setTheme(nextTheme);
+    try {
+      localStorage.setItem(THEME_KEY, nextTheme);
+    } catch {
+      // A preferência continua aplicada nesta sessão mesmo se o armazenamento estiver indisponível.
+    }
+  }
 }
 
 function App() {
